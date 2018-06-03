@@ -14,6 +14,7 @@
 #define VIEW_H
 
 #include <QGraphicsView>
+#include <QMenu>
 
 #include "kst_export.h"
 
