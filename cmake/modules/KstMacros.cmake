@@ -100,7 +100,7 @@ macro(kst_add_test _source_file)
 	else()
 	set(_moced moc_${_file_name})
 	endif()
-	GENERATE_MOC
+	set(CMAKE_AUTOMOC ON)
 	set_source_files_properties(${_source_file} PROPERTIES OBJECT_DEPENDS ${_moced}) # moc on source file changes
 	add_executable(${kst_name} ${_source_file})
 	set_target_properties(${kst_name} PROPERTIES DEPEND ${_moced})
