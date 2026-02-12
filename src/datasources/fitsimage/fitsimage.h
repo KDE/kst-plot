@@ -22,6 +22,7 @@
 
 class DataInterfaceFitsImageMatrix;
 class DataInterfaceFitsImageString;
+class DataInterfaceFitsImageVector;
 
 
 class FitsImageSource : public Kst::DataSource {
@@ -55,6 +56,7 @@ class FitsImageSource : public Kst::DataSource {
 
     DataInterfaceFitsImageString* is;
     DataInterfaceFitsImageMatrix* im;
+    DataInterfaceFitsImageVector* iv;
 
     friend class DataInterfaceFitsImageString;
 };
