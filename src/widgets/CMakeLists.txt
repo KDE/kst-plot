@@ -11,6 +11,28 @@ generate_export_header(Kst6Widgets
     BASE_NAME KSTWIDGETS
 )
 
+set_target_properties(Kst6Widgets PROPERTIES
+    AUTOUIC OFF
+)
+
+set(Kst6Widgets_UI_FILES
+    colorpalette.ui
+    curveappearance.ui
+    curveplacement.ui
+    curveselector.ui
+    datarange.ui
+    fftoptions.ui
+    labelbuilder.ui
+    matrixselector.ui
+    modelessinfobox.ui
+    scalarlistselector.ui
+    scalarselector.ui
+    stringselector.ui
+    vectorselector.ui
+)
+
+qt_wrap_ui(Kst6Widgets_UI_HEADERS ${Kst6Widgets_UI_FILES})
+
 target_include_directories(Kst6Widgets
     INTERFACE
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
@@ -68,19 +90,7 @@ target_sources(Kst6Widgets PRIVATE
     scalarselector.cpp
     stringselector.cpp
     vectorselector.cpp
-    colorpalette.ui
-    curveappearance.ui
-    curveplacement.ui
-    curveselector.ui
-    datarange.ui
-    fftoptions.ui
-    labelbuilder.ui
-    matrixselector.ui
-    modelessinfobox.ui
-    scalarlistselector.ui
-    scalarselector.ui
-    stringselector.ui
-    vectorselector.ui
+    ${Kst6Widgets_UI_HEADERS}
 )
 
 target_link_libraries(Kst6Widgets PUBLIC

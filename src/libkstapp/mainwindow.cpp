@@ -1916,7 +1916,7 @@ void MainWindow::updateProgress(int percent, const QString& message)
 }
 
 void MainWindow::readFromEnd() {
-  int nf = 0;
+  double nf = 0;
   int skip;
   bool do_skip;
   bool do_filter;
@@ -1935,7 +1935,7 @@ void MainWindow::readFromEnd() {
     v->unlock();
 
     v->writeLock();
-    v->changeFrames(-1, nf, skip, do_skip, do_filter);
+    v->changeFrames(0, true, nf, false, skip, do_skip, do_filter);
     v->registerChange();
     v->unlock();
   }
@@ -1973,7 +1973,7 @@ void MainWindow::readFromEnd() {
 }
 
 void MainWindow::readToEnd() {
-  int f0 = 0;
+  double f0 = 0;
   int skip;
   bool do_skip;
   bool do_filter;
@@ -1989,7 +1989,7 @@ void MainWindow::readToEnd() {
     v->unlock();
 
     v->writeLock();
-    v->changeFrames(f0, -1, skip, do_skip, do_filter);
+    v->changeFrames(f0, false, 0, true, skip, do_skip, do_filter);
     v->registerChange();
     v->unlock();
   }
@@ -2037,11 +2037,11 @@ void MainWindow::pause(bool pause) {
 }
 
 void MainWindow::forward(double scale) {
-  int f0 = 0;
-  int nf = 0;
-  int lastF = -1;
+  double f0 = 0;
+  double nf = 0;
+  double lastF = -1;
   int skip;
-  int filelength;
+  double filelength;
   bool count_from_end;
   bool read_to_end;
   bool do_skip;
@@ -2051,8 +2051,7 @@ void MainWindow::forward(double scale) {
   DataMatrixList dataMatrices = document()->objectStore()->getObjects<DataMatrix>();
   VScalarList vScalars = document()->objectStore()->getObjects<VScalar>();
   DataStringList dataStrings = document()->objectStore()->getObjects<DataString>();
-  QHash<int,int> lastframehash;
-
+  QHash<double,int> lastframehash;
   foreach (DataVectorPtr v, dataVectors) {
     v->readLock();
     f0 = v->startFrame();
@@ -2075,15 +2074,15 @@ void MainWindow::forward(double scale) {
       ++lastframehash[lastF];
 
       v->writeLock();
-      v->changeFrames(f0, nf, skip, do_skip, do_filter);
+      v->changeFrames(f0, false, nf, false, skip, do_skip, do_filter);
       v->registerChange();
       v->unlock();
     }
   }
 
-  int most_popular_lastF = -1;
+  double most_popular_lastF = -1;
   int n_most_popular_lastF = -1;
-  foreach (int key, lastframehash.keys()) {
+  foreach (double key, lastframehash.keys()) {
     int n = lastframehash[key] ;
     if (n > n_most_popular_lastF) {
       n_most_popular_lastF = n;
@@ -2177,22 +2176,22 @@ void MainWindow::forward(double scale) {
 }
 
 void MainWindow::back(double scale) {
-  int f0 = 0;
-  int nf = 0;
+  double f0 = 0;
+  double nf = 0;
   int skip;
-  int filelength;
+  double filelength;
   bool count_from_end;
   bool read_to_end;
   bool do_skip;
   bool do_filter;
-  int lastF = -1;
+  double lastF = -1;
 
   DataVectorList dataVectors = document()->objectStore()->getObjects<DataVector>();
   DataMatrixList dataMatrices = document()->objectStore()->getObjects<DataMatrix>();
   VScalarList vScalars = document()->objectStore()->getObjects<VScalar>();
   DataStringList dataStrings = document()->objectStore()->getObjects<DataString>();
 
-  QHash<int,int> lastframehash;
+  QHash<double,int> lastframehash;
 
   foreach (DataVectorPtr v, dataVectors) {
     v->readLock();
@@ -2223,15 +2222,15 @@ void MainWindow::back(double scale) {
       ++lastframehash[lastF];
 
       v->writeLock();
-      v->changeFrames(f0, nf, skip, do_skip, do_filter);
+      v->changeFrames(f0, false, nf, false, skip, do_skip, do_filter);
       v->registerChange();
       v->unlock();
     }
   }
 
-  int most_popular_lastF = -1;
+  double most_popular_lastF = -1;
   int n_most_popular_lastF = -1;
-  foreach (int key, lastframehash.keys()) {
+  foreach (double key, lastframehash.keys()) {
     int n = lastframehash[key] ;
     if (n > n_most_popular_lastF) {
       n_most_popular_lastF = n;

@@ -44,6 +44,16 @@ class DataSourceConfigWidget;
 //class DataSourcePlugin;
 
 
+struct KSTCORE_EXPORT IndexFieldProperties {
+  QString name;
+  bool is_frame;    // true if this field is a plain frame counter (rows/frames)
+  bool is_ctime;    // true if this field represents Unix epoch time (ctime / formatted time)
+  bool is_seconds;  // true if this field represents seconds (possibly with an epoch offset)
+
+  bool isTime() const { return is_ctime || is_seconds; }
+};
+
+
 class KSTCORE_EXPORT DataSource : public Object
 {
   Q_OBJECT
@@ -72,7 +82,7 @@ class KSTCORE_EXPORT DataSource : public Object
       virtual bool isValid(const QString& name) const = 0;
 
       // T specific
-      virtual const typename T::DataInfo dataInfo(const QString& name, int frame=0) const = 0;
+      virtual const typename T::DataInfo dataInfo(const QString& name, double frame=0) const = 0;
       virtual void setDataInfo(const QString& name, const typename T::DataInfo&) = 0;
 
       // meta data
@@ -130,29 +140,23 @@ class KSTCORE_EXPORT DataSource : public Object
     virtual void enableUpdates() {return;}
     /************************************************************/
     /* Methods for handling time in vectors.                    */
-    /* not currently used - may be reworked (remove this note   */
-    /* if you use it)                                           */
     /************************************************************/
     static bool supportsTime(const QString& plugin, const QString& type = QString());
     virtual QString timeFormat() const;
 
     /** Does it support time conversion of sample numbers, in general? */
-    virtual bool supportsTimeConversions() const;
+    // virtual bool supportsTimeConversions() const;
 
-    virtual int sampleForTime(const QDateTime& time, bool *ok = 0L);
+    // virtual int sampleForTime(const QDateTime& time, bool *ok = 0L);
 
-    virtual int sampleForTime(double milliseconds, bool *ok = 0L);
+    // virtual int sampleForTime(double milliseconds, bool *ok = 0L);
 
-    virtual QDateTime timeForSample(int sample, bool *ok = 0L);
+    // virtual QDateTime timeForSample(int sample, bool *ok = 0L);
 
     // in (ms)
-    virtual double relativeTimeForSample(int sample, bool *ok = 0L);
+    // virtual double relativeTimeForSample(int sample, bool *ok = 0L);
 
-    /************************************************************/
-    /* Methods for handling time in vectors. These are used.    */
-    /************************************************************/
-    virtual bool isTime(const QString &field) const;
-
+    
 
     /************************************************************/
     /* Methods for using custom lookup vectors, like TIME.      */
@@ -165,8 +169,7 @@ class KSTCORE_EXPORT DataSource : public Object
     virtual double frameToIndex(int frame, const QString &field);
     virtual double readDespikedIndex(int frame, const QString &field);
     virtual double framePerIndex(const QString &field);
-    virtual QStringList &timeFields();
-    virtual QStringList &indexFields();
+    virtual const QList<IndexFieldProperties>& indexFieldProperties();
 
 
     /************************************************************/
@@ -276,8 +279,7 @@ class KSTCORE_EXPORT DataSource : public Object
     void setInterface(DataInterface<DataVector>*);
     void setInterface(DataInterface<DataMatrix>*);
 
-    QStringList _frameFields;
-    QStringList _timeFields;
+    QList<IndexFieldProperties> _indexFieldProps;
   private:
     DataSource();
 

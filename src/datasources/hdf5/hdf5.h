@@ -58,7 +58,7 @@ class HDF5Source : public Kst::DataSource {
 
     unsigned frameCount(const QString& field);
 
-    int readField(double *v, const QString& field, int start, int numFrames);
+    int readField(double *v, const QString& field, double start, double numFrames);
 
     int readScalar(double& s, const QString& field);
 

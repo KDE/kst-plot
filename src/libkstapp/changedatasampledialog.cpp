@@ -139,17 +139,21 @@ void ChangeDataSampleDialog::updateIndexEntries() {
     }
   }
 
-  QStringList index_fields;
+  QList<IndexFieldProperties> index_fields;
 
   // make a list of fields which are provided by all data sources...
   if (data_sources.size()>0) {
-    foreach (const QString &field, data_sources[0]->indexFields()) {
+    foreach (const IndexFieldProperties &ifp, data_sources[0]->indexFieldProperties()) {
       bool in_all = true;
       for (int i=1; i<data_sources.size(); i++) {
-        in_all = in_all && (data_sources[i]->indexFields().contains(field));
+        bool found = false;
+        for (const IndexFieldProperties &other : data_sources[i]->indexFieldProperties()) {
+          if (other.name == ifp.name) { found = true; break; }
+        }
+        in_all = in_all && found;
       }
       if (in_all) {
-        index_fields.append(field);
+        index_fields.append(ifp);
       }
     }
   }
@@ -298,11 +302,13 @@ void ChangeDataSampleDialog::apply() {
 
   QString start_units;
   QString range_units;
-  QHash<QString, int> f0_map;
-  QHash<QString, int> r_map;
-  bool custom_start_index = (_dataRange->_startUnits->currentIndex() != 0) && (!_dataRange->countFromEnd());
+  QHash<QString, double> f0_map;
+  QHash<QString, double> r_map;
+  QHash<QString, bool> countFromEnd_map;
+  QHash<QString, bool> readToEnd_map;
+  bool custom_start_index = (!_dataRange->startIsFrame()) && (!_dataRange->countFromEnd());
 
-  bool custom_range_index = (_dataRange->_rangeUnits->currentIndex() != 0) && (!_dataRange->readToEnd());
+  bool custom_range_index = (!_dataRange->rangeIsFrame()) && (!_dataRange->readToEnd());
 
   if (!custom_start_index && !custom_range_index) { // FIXME: also for custom index.
     start_units.clear();
@@ -339,8 +345,8 @@ void ChangeDataSampleDialog::apply() {
     }
   }
 
-  start_units = _dataRange->_startUnits->currentText();
-  range_units = _dataRange->_rangeUnits->currentText();
+  start_units = _dataRange->startUnits();
+  range_units = _dataRange->rangeUnits();
 
   for (int i = 0; i < selectedItems.size(); ++i) {
     QString filename;
@@ -365,24 +371,30 @@ void ChangeDataSampleDialog::apply() {
     }
     if (valid) {
       if (!f0_map.contains(filename)) {
-        int f0;
-        int r;
+        double f0;
+        double r;
+        bool cfe = false; // countFromEnd
+        bool rte = false; // readToEnd
         if (use_custom_start_index) {
           f0 = datasource->indexToFrame(_dataRange->start(), start_units);
         } else if (_dataRange->countFromEnd()) {
-          f0 = -1;
+          f0 = -1; // keep -1 for matrix/vscalar backward compat
+          cfe = true;
         } else {
           f0 = _dataRange->start();
         }
         if (use_custom_range_index) {
           r = _dataRange->range()*datasource->framePerIndex(range_units);
         } else if (_dataRange->readToEnd()) {
-          r = -1;
+          r = -1; // keep -1 for matrix/vscalar backward compat
+          rte = true;
         } else {
-          r = (int)_dataRange->range();
+          r = _dataRange->range();
         }
         f0_map.insert(filename, f0);
         r_map.insert(filename, r);
+        countFromEnd_map.insert(filename, cfe);
+        readToEnd_map.insert(filename, rte);
       }
     }
   }
@@ -390,10 +402,14 @@ void ChangeDataSampleDialog::apply() {
   for (int i = 0; i < selectedItems.size(); ++i) {
     if (DataVectorPtr vector = kst_cast<DataVector>(_store->retrieveObject(selectedItems.at(i)->text()))) {
       vector->writeLock();
-      int from = f0_map.value(vector->filename());
-      int range = r_map.value(vector->filename());
-      vector->changeFrames( from, 
-                            range,
+      double from = f0_map.value(vector->filename());
+      double range = r_map.value(vector->filename());
+      bool cfe = countFromEnd_map.value(vector->filename());
+      bool rte = readToEnd_map.value(vector->filename());
+      vector->changeFrames( cfe ? 0 : from,
+                            cfe,
+                            rte ? 0 : range,
+                            rte,
                             _dataRange->skip(),
                             _dataRange->doSkip(),
                             _dataRange->doFilter());
@@ -403,12 +419,12 @@ void ChangeDataSampleDialog::apply() {
       vector->unlock();
     } else if (DataMatrixPtr matrix = kst_cast<DataMatrix>(_store->retrieveObject(selectedItems.at(i)->text()))) {
       matrix->writeLock();
-      int from = f0_map.value(matrix->filename());
-      int range = r_map.value(matrix->filename());
+      double from = f0_map.value(matrix->filename());
+      double range = r_map.value(matrix->filename());
       if (from < 0) {
         matrix->setFrame(-1);
       } else {
-        matrix->setFrame(from+range-1);
+        matrix->setFrame((int)(from+range-1));
       }
       matrix->setStartUnits(start_units);
       matrix->setRangeUnits(start_units);
@@ -416,9 +432,9 @@ void ChangeDataSampleDialog::apply() {
       matrix->unlock();
     } else if (VScalarPtr vscalar = kst_cast<VScalar>(_store->retrieveObject(selectedItems.at(i)->text()))) {
       vscalar->writeLock();
-      int from = f0_map.value(vscalar->filename());
-      int range = r_map.value(vscalar->filename());
-      vscalar->changeFrame(from+range-1);
+      double from = f0_map.value(vscalar->filename());
+      double range = r_map.value(vscalar->filename());
+      vscalar->changeFrame((int)(from+range-1));
       //vscalar->setStartUnits(start_units);
       //vscalar->setRangeUnits(start_units);
       vscalar->registerChange();
@@ -436,8 +452,8 @@ void ChangeDataSampleDialog::apply() {
   dialogDefaults().setValue("vector/skip", _dataRange->skip());
   dialogDefaults().setValue("vector/doSkip", _dataRange->doSkip());
   dialogDefaults().setValue("vector/doAve", _dataRange->doFilter());
-  dialogDefaults().setValue("vector/startUnits", _dataRange->_startUnits->currentText());
-  dialogDefaults().setValue("vector/rangeUnits", _dataRange->_rangeUnits->currentText());
+  dialogDefaults().setValue("vector/startUnits", _dataRange->startUnits());
+  dialogDefaults().setValue("vector/rangeUnits", _dataRange->rangeUnits());
 
   updateCurveListDialog();
   kstApp->mainWindow()->document()->setChanged(true);

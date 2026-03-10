@@ -190,7 +190,7 @@ class DataWizard : public QWizard
     virtual ~DataWizard();
 
     QStringList dataSourceFieldList() const;
-    QStringList dataSourceIndexList() const;
+    QList<Kst::IndexFieldProperties> dataSourceIndexList() const;
 
     DataWizardPageDataSource *_pageDataSource;
   private:

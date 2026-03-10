@@ -18,6 +18,75 @@ target_include_directories(Kst6App
         "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/Kst6App}>"
 )
 
+set_target_properties(Kst6App PROPERTIES
+    AUTOUIC OFF
+)
+
+set(Kst6App_UI_FILES
+    aboutdialog.ui
+    arrowpropertiestab.ui
+    axistab.ui
+    baddatasourcedialog.ui
+    basicplugintab.ui
+    bugreportwizard.ui
+    changedatasampledialog.ui
+    changefiledialog.ui
+    choosecolordialog.ui
+    circledimensionstab.ui
+    contenttab.ui
+    csdtab.ui
+    curvetab.ui
+    datamanager.ui
+    datasourcedialog.ui
+    datawizardpagedatapresentation.ui
+    datawizardpagedatasource.ui
+    datawizardpagefilters.ui
+    datawizardpageplot.ui
+    datawizardpagevectors.ui
+    debugdialog.ui
+    defaultlabelpropertiestab.ui
+    dialog.ui
+    dialogpage.ui
+    differentiatecurvesdialog.ui
+    dimensionstab.ui
+    editmultiplewidget.ui
+    equationtab.ui
+    eventmonitortab.ui
+    exportgraphicsdialog.ui
+    exportvectorsdialog.ui
+    filltab.ui
+    filterfittab.ui
+    filtermultipledialog.ui
+    generaltab.ui
+    gridtab.ui
+    histogramtab.ui
+    imagetab.ui
+    labelcreator.ui
+    labeldimensionstab.ui
+    labelpropertiestab.ui
+    labeltab.ui
+    layouttab.ui
+    legendtab.ui
+    linedimensionstab.ui
+    logdialog.ui
+    markerstab.ui
+    matrixtab.ui
+    overridelabeltab.ui
+    powerspectrumtab.ui
+    rangetab.ui
+    scalartab.ui
+    shortcutdialog.ui
+    stringtab.ui
+    stroketab.ui
+    themedialog.ui
+    vectortab.ui
+    viewmatrixdialog.ui
+    viewprimitivedialog.ui
+    viewvectordialog.ui
+)
+
+qt_wrap_ui(Kst6App_UI_HEADERS ${Kst6App_UI_FILES})
+
 # set(AUTHORS ${kst_dir}/AUTHORS)
 # set_source_files_properties(${AUTHORS} PROPERTIES GENERATED TRUE HEADER_FILE_ONLY TRUE)
 # file(READ ${AUTHORS} data)
@@ -286,66 +355,7 @@ target_sources(Kst6App PRIVATE
     viewmatrixdialog.cpp
     viewprimitivedialog.cpp
     viewvectordialog.cpp
-    aboutdialog.ui
-    arrowpropertiestab.ui
-    axistab.ui
-    baddatasourcedialog.ui
-    basicplugintab.ui
-    bugreportwizard.ui
-    changedatasampledialog.ui
-    changefiledialog.ui
-    choosecolordialog.ui
-    circledimensionstab.ui
-    contenttab.ui
-    csdtab.ui
-    curvetab.ui
-    datamanager.ui
-    datasourcedialog.ui
-    datawizardpagedatapresentation.ui
-    datawizardpagedatasource.ui
-    datawizardpagefilters.ui
-    datawizardpageplot.ui
-    datawizardpagevectors.ui
-    debugdialog.ui
-    defaultlabelpropertiestab.ui
-    dialog.ui
-    dialogpage.ui
-    differentiatecurvesdialog.ui
-    dimensionstab.ui
-    editmultiplewidget.ui
-    equationtab.ui
-    eventmonitortab.ui
-    exportgraphicsdialog.ui
-    exportvectorsdialog.ui
-    filltab.ui
-    filterfittab.ui
-    filtermultipledialog.ui
-    generaltab.ui
-    gridtab.ui
-    histogramtab.ui
-    imagetab.ui
-    labelcreator.ui
-    labeldimensionstab.ui
-    labelpropertiestab.ui
-    labeltab.ui
-    layouttab.ui
-    legendtab.ui
-    linedimensionstab.ui
-    logdialog.ui
-    markerstab.ui
-    matrixtab.ui
-    overridelabeltab.ui
-    powerspectrumtab.ui
-    rangetab.ui
-    scalartab.ui
-    shortcutdialog.ui
-    stringtab.ui
-    stroketab.ui
-    themedialog.ui
-    vectortab.ui
-    viewmatrixdialog.ui
-    viewprimitivedialog.ui
-    viewvectordialog.ui
+    ${Kst6App_UI_HEADERS}
 )
 
 target_link_libraries(Kst6App PUBLIC

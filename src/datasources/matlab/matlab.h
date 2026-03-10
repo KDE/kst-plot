@@ -41,7 +41,7 @@ class MatlabSource : public Kst::DataSource {
 
     int readString(QString *stringValue, const QString& stringName);
 
-    int readField(double *v, const QString& field, int s, int n);
+    int readField(double *v, const QString& field, double s, double n);
 
     int readMatrix(double *v, const QString& field);
 

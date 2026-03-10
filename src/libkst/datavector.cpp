@@ -33,15 +33,11 @@
 #include "updatemanager.h"
 #include "vectorscriptinterface.h"
 
-// ReqNF <=0 means read from ReqF0 to end of File
-// ReqF0 < means start at EndOfFile-ReqNF.
-//
-// ReqNF      ReqF0      Action
-//  < 1        >=0       read from ReqF0 to end of file
-//  < 1        < 0       illegal: fixed in checkIntegrity
-//    1         ??       illegal: fixed in checkIntegrity
-//  > 1        < 0       read the last ReqNF frames from the file
-//  > 1        >=0       Read ReqNF frames starting at frame ReqF0
+// _readToEnd  _countFromEnd   Action
+//  true        false           read from ReqF0 to end of file
+//  false       true            read the last ReqNF frames from end of file
+//  false       false           read ReqNF frames starting at frame ReqF0
+//  true        true            illegal: fixed in checkIntegrity (resets to readToEnd)
 
 namespace Kst {
 
@@ -57,7 +53,7 @@ DataVector::DataInfo::DataInfo() :
 }
 
 
-DataVector::DataInfo::DataInfo(int fc, int spf) :
+DataVector::DataInfo::DataInfo(double fc, int spf) :
     frameCount(fc),
     samplesPerFrame(spf)
 {
@@ -77,7 +73,9 @@ DataVector::DataVector(ObjectStore *store)
   AveReadBuf = 0L;
 
   ReqF0 = 0;
-  ReqNF = -1;
+  ReqNF = 0;
+  _countFromEnd = false;
+  _readToEnd = true; // default: read to end of file
   Skip = 1;
   DoSkip = false;
   DoAve = false;
@@ -118,7 +116,8 @@ bool DataVector::checkValidity(const DataSourcePtr& ds) const {
 }
 
 void DataVector::change(DataSourcePtr in_file, const QString &in_field,
-                        int in_f0, int in_n,
+                        double in_f0, bool in_countFromEnd,
+                        double in_n, bool in_readToEnd,
                         int in_skip, bool in_DoSkip,
                         bool in_DoAve) {
   Q_ASSERT(myLockStatus() == KstRWLock::WRITELOCKED);
@@ -133,7 +132,14 @@ void DataVector::change(DataSourcePtr in_file, const QString &in_field,
   setDataSource(in_file);
   ReqF0 = in_f0;
   ReqNF = in_n;
+  _countFromEnd = in_countFromEnd;
+  _readToEnd = in_readToEnd;
   _field = in_field;
+
+  // Illegal: countFromEnd and readToEnd simultaneously — default to read whole file
+  if (_countFromEnd && _readToEnd) {
+    _countFromEnd = false;
+  }
 
   if (dataSource()) {
     dataSource()->writeLock();
@@ -141,10 +147,6 @@ void DataVector::change(DataSourcePtr in_file, const QString &in_field,
   reset();
   if (dataSource()) {
     dataSource()->unlock();
-  }
-
-  if (ReqNF <= 0 && ReqF0 < 0) {
-    ReqF0 = 0;
   }
   registerChange();
 }
@@ -182,7 +184,8 @@ void DataVector::changeFile(DataSourcePtr in_file) {
 }
 
 
-void DataVector::changeFrames(int in_f0, int in_n,
+void DataVector::changeFrames(double in_f0, bool in_countFromEnd,
+                              double in_n, bool in_readToEnd,
                               int in_skip, bool in_DoSkip,
                               bool in_DoAve) {
 
@@ -204,10 +207,14 @@ void DataVector::changeFrames(int in_f0, int in_n,
 
   ReqF0 = in_f0;
   ReqNF = in_n;
+  _countFromEnd = in_countFromEnd;
+  _readToEnd = in_readToEnd;
 
-  if (ReqNF <= 0 && ReqF0 < 0) {
-    ReqF0 = 0;
+  // Illegal: countFromEnd and readToEnd simultaneously — default to read whole file
+  if (_countFromEnd && _readToEnd) {
+    _countFromEnd = false;
   }
+
   registerChange();
 }
 
@@ -215,10 +222,13 @@ void DataVector::changeFrames(int in_f0, int in_n,
 void DataVector::setFromEnd() {
   Q_ASSERT(myLockStatus() == KstRWLock::WRITELOCKED);
 
-  ReqF0 = -1;
+  _countFromEnd = true;
+  _readToEnd = false;
+  ReqF0 = 0;
   if (ReqNF < 2) {
     ReqNF = numFrames();
     if (ReqNF < 2) {
+      _countFromEnd = false; // fallback: too few frames, just read from start
       ReqF0 = 0;
     }
   }
@@ -235,17 +245,27 @@ DataVector::~DataVector() {
 
 
 bool DataVector::readToEOF() const {
-  return ReqNF <= 0;
+  return _readToEnd;
 }
 
 
 bool DataVector::countFromEOF() const {
-  return ReqF0 < 0;
+  return _countFromEnd;
+}
+
+
+bool DataVector::reqCountFromEnd() const {
+  return _countFromEnd;
+}
+
+
+bool DataVector::reqReadToEnd() const {
+  return _readToEnd;
 }
 
 
 /** Return Starting Frame of Vector */
-int DataVector::startFrame() const {
+double DataVector::startFrame() const {
   return F0;
 }
 
@@ -267,17 +287,17 @@ bool DataVector::doAve() const {
 
 
 /** Return frames held in Vector */
-int DataVector::numFrames() const {
+double DataVector::numFrames() const {
   return NF;
 }
 
 
-int DataVector::reqNumFrames() const {
+double DataVector::reqNumFrames() const {
   return ReqNF;
 }
 
 
-int DataVector::reqStartFrame() const {
+double DataVector::reqStartFrame() const {
   return ReqF0;
 }
 
@@ -289,8 +309,10 @@ void DataVector::save(QXmlStreamWriter &s) {
     saveFilename(s);
     s.writeAttribute("field", _field);
 
-    s.writeAttribute("start", QString::number(ReqF0));
-    s.writeAttribute("count", QString::number(ReqNF));
+    s.writeAttribute("start", QString::number(ReqF0, 'g', 17));
+    s.writeAttribute("count", QString::number(ReqNF, 'g', 17));
+    s.writeAttribute("countFromEnd", _countFromEnd ? "true" : "false");
+    s.writeAttribute("readToEnd", _readToEnd ? "true" : "false");
 
     if (doSkip()) {
       s.writeAttribute("skip", QString::number(Skip));
@@ -385,9 +407,9 @@ bool DataVector::checkIntegrity() {
   //   return false;
   // }
 
-  // check for illegal NF and F0 values
-  if (ReqNF < 1 && ReqF0 < 0) {
-    ReqF0 = 0; // for this illegal case, read the whole file
+  // check for illegal mode: countFromEnd and readToEnd both set
+  if (_countFromEnd && _readToEnd) {
+    _countFromEnd = false; // default to read whole file from start
   }
 
   if (ReqNF == 1) {
@@ -423,7 +445,7 @@ bool DataVector::checkIntegrity() {
 void DataVector::internalUpdate() {
   int i, k, shift, n_read=0;
   int ave_nread;
-  int new_f0, new_nf;
+  double new_f0, new_nf;
   bool start_past_eof = false;
 
   if (dataSource()) {
@@ -445,11 +467,11 @@ void DataVector::internalUpdate() {
   }
 
   // set new_nf and new_f0
-  int fc = info.frameCount;
-  if (ReqNF < 1) { // read to end of file
+  double fc = info.frameCount;
+  if (_readToEnd) { // read to end of file
     new_f0 = ReqF0;
     new_nf = fc - new_f0;
-  } else if (ReqF0 < 0) { // count back from end of file
+  } else if (_countFromEnd) { // count back from end of file
     new_nf = fc;
     if (new_nf > ReqNF) {
       new_nf = ReqNF;
@@ -471,7 +493,7 @@ void DataVector::internalUpdate() {
 
   if (DoSkip) {
     // in count from end mode, change new_f0 and new_nf so they both lie on skip boundaries
-    if ((new_f0 != 0) && (ReqF0<0)) {
+    if ((new_f0 != 0) && _countFromEnd) {
       new_f0 = ((new_f0-1)/Skip+1)*Skip;
     }
     new_nf = (new_nf/Skip)*Skip;
@@ -482,18 +504,18 @@ void DataVector::internalUpdate() {
     reset();
   } else { // shift stuff rather than re-read
     if (DoSkip) {
-      shift = (new_f0 - F0)/Skip;
+      shift = (int)((new_f0 - F0)/Skip);
       NF -= (new_f0 - F0);
-      _numSamples = NF/Skip;
+      _numSamples = (int)(NF/Skip);
     } else {
-      shift = SPF*(new_f0 - F0);
+      shift = (int)(SPF*(new_f0 - F0));
       NF -= (new_f0 - F0);
       //_numSamples = (NF-1)*SPF;
       if (shift > 0) {
         if (SPF == 1) {
-          _numSamples = NF;
+          _numSamples = (int)NF;
         } else {
-          _numSamples = (NF-1)*SPF;
+          _numSamples = (int)((NF-1)*SPF);
         }
       }
     }
@@ -503,8 +525,8 @@ void DataVector::internalUpdate() {
 
   if (DoSkip) {
     // reallocate V if necessary
-    if (new_nf / Skip != _size) {
-      if (! resize(new_nf/Skip)) {
+    if ((int)(new_nf / Skip) != _size) {
+      if (! resize((int)(new_nf/Skip))) {
         // TODO: Is aborting all we can do?
         fatalError("Not enough memory for vector data");
         return;
@@ -513,9 +535,9 @@ void DataVector::internalUpdate() {
     n_read = 0;
     /** read each sample from the File */
     double *t = _v_raw + _numSamples;
-    int new_nf_Skip = new_nf - Skip;
+    int new_nf_Skip = (int)(new_nf - Skip);
     if (DoAve) {
-      for (i = NF; new_nf_Skip >= i; i += Skip) {
+      for (i = (int)NF; new_nf_Skip >= i; i += Skip) {
         /* enlarge AveReadBuf if necessary */
         if (N_AveReadBuf < Skip*SPF) {
           N_AveReadBuf = Skip*SPF;
@@ -537,14 +559,14 @@ void DataVector::internalUpdate() {
         ++t;
       }
     } else {
-      for (i = NF; new_nf_Skip >= i; i += Skip) {
-        n_read += readField(t++, _field, new_f0 + i, -1);
+      for (i = (int)NF; new_nf_Skip >= i; i += Skip) {
+        n_read += readField(t++, _field, new_f0 + i, 1, -1, true);
       }
     }
   } else {
     // reallocate V if necessary
-    if ((new_nf - 1)*SPF + 1 != _size) {
-      if (!resize((new_nf - 1)*SPF + 1)) {
+    if ((int)((new_nf - 1)*SPF + 1) != _size) {
+      if (!resize((int)((new_nf - 1)*SPF + 1))) {
         // TODO: Is aborting all we can do?
         fatalError("Not enough memory for vector data");
         return;
@@ -559,18 +581,18 @@ void DataVector::internalUpdate() {
       if (NF>0) {
         NF--;  /* last frame read was only partially read... */
       }
-      int safe_nf = (new_nf>0 ? new_nf : 0);
+      int safe_nf = (int)(new_nf>0 ? new_nf : 0);
 
       assert(new_f0 + NF >= 0);
       //assert(new_f0 + safe_nf - 1 >= 0);
       if ((new_f0 + safe_nf - 1 >= 0) && (safe_nf - NF > 1)) {
-        n_read = readField(_v_raw+NF*SPF, _field, new_f0 + NF, safe_nf - NF - 1);
-        n_read += readField(_v_raw+(safe_nf-1)*SPF, _field, new_f0 + safe_nf - 1, -1);
+        n_read = readField(_v_raw+(qint64)(NF*SPF), _field, new_f0 + NF, safe_nf - NF - 1);
+        n_read += readField(_v_raw+(qint64)((safe_nf-1)*SPF), _field, new_f0 + safe_nf - 1, 1, -1, true);
       }
     } else {
       assert(new_f0 + NF >= 0);
       if (new_nf - NF > 0 || new_nf - NF == -1) {
-        n_read = readField(_v_raw+NF*SPF, _field, new_f0 + NF, new_nf - NF);
+        n_read = readField(_v_raw+(qint64)(NF*SPF), _field, new_f0 + NF, new_nf - NF);
       }
     }
   }
@@ -614,10 +636,13 @@ QByteArray DataVector::scriptInterface(QList<QByteArray> &c)
 {
   Q_ASSERT(c.size());
   if(c[0]=="changeFrames") {
-    if(c.size()!=6) {
-      return QByteArray("Bad parameter count (!=5).");
+    if(c.size()!=8) {
+      return QByteArray("Bad parameter count (!=7).");
     }
-    changeFrames(c[1].toInt(),c[2].toInt(),c[3].toInt(),(c[4]=="true")?1:0,(c[5]=="true")?1:0);
+    // args: f0 countFromEnd n readToEnd skip doSkip doAve
+    changeFrames(c[1].toDouble(), (c[2]=="true"),
+                 c[3].toDouble(), (c[4]=="true"),
+                 c[5].toInt(),(c[6]=="true")?1:0,(c[7]=="true")?1:0);
     return QByteArray("Done.");
   } else if(c[0]=="numFrames") {
     return QByteArray::number(numFrames());
@@ -656,10 +681,10 @@ int DataVector::samplesPerFrame() const {
 }
 
 
-int DataVector::fileLength() const {
+double DataVector::fileLength() const {
 
   if (dataSource()) {
-    int rc = dataInfo(_field).frameCount;
+    double rc = dataInfo(_field).frameCount;
 
     return rc;
   }
@@ -762,7 +787,7 @@ PrimitivePtr DataVector::makeDuplicate() const {
   DataVectorPtr vector = store()->createObject<DataVector>();
 
   vector->writeLock();
-  vector->change(dataSource(), _field, ReqF0, ReqNF, Skip, DoSkip, DoAve);
+  vector->change(dataSource(), _field, ReqF0, _countFromEnd, ReqNF, _readToEnd, Skip, DoSkip, DoAve);
   if (descriptiveNameIsManual()) {
     vector->setDescriptiveName(descriptiveName());
   }
@@ -819,9 +844,16 @@ QString DataVector::propertyString() const {
 }
 
 
-int DataVector::readField(double *v, const QString& field, int s, int n, int skip)
+int DataVector::readField(double *v, const QString& field, double s, double n, double skip, bool singleSample)
 {
-  ReadInfo par = {v, s, n, skip};
+  ReadInfo par;
+  par.data = v;
+  par.startingFrame = s;
+  // Many datasource plugins use numberOfFrames < 0 as the "read exactly 1 sample"
+  // convention.  Preserve that contract so existing plugins keep working correctly.
+  par.numberOfFrames = singleSample ? -1 : n;
+  par.skipFrame = skip;
+  par.singleSample = singleSample;
   return dataSource()->vector().read(field, par);
 }
 
@@ -833,8 +865,13 @@ const DataVector::DataInfo DataVector::dataInfo(const QString& field) const
   return info;
 }
 
-bool DataVector::isTime() const {
-  return dataSource()->isTime(_field);
+bool DataVector::isCTime() const {
+  for (const IndexFieldProperties& ifp : dataSource()->indexFieldProperties()) {
+    if (ifp.name == _field) {
+      return ifp.is_ctime;
+    }
+  }
+  return false;
 }
 
 }

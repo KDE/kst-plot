@@ -867,8 +867,8 @@ QStringList DataWizard::dataSourceFieldList() const {
   return _pageDataSource->dataSourceFieldList();
 }
 
-QStringList DataWizard::dataSourceIndexList() const {
-  return _pageDataSource->dataSource()->indexFields();
+QList<Kst::IndexFieldProperties> DataWizard::dataSourceIndexList() const {
+  return _pageDataSource->dataSource()->indexFieldProperties();
 }
 
 
@@ -906,6 +906,7 @@ void DataWizard::finished() {
   }
 
   ds->enableUpdates();
+  ds->internalDataSourceUpdate();
 
   emit dataSourceLoaded(ds->fileName());
 
@@ -919,17 +920,17 @@ void DataWizard::finished() {
   double startOffset = _pageDataPresentation->dataRange()->start();
   double rangeCount = _pageDataPresentation->dataRange()->range();
 
-  bool customStartIndex = (_pageDataPresentation->dataRange()->_startUnits->currentIndex() != 0) &&
+  bool customStartIndex = (!_pageDataPresentation->dataRange()->startIsFrame()) &&
                           (!_pageDataPresentation->dataRange()->countFromEnd());
-  bool customRangeCount = (_pageDataPresentation->dataRange()->_rangeUnits->currentIndex() != 0) &&
+  bool customRangeCount = (!_pageDataPresentation->dataRange()->rangeIsFrame()) &&
                           (!_pageDataPresentation->dataRange()->readToEnd());
-
   if (customStartIndex) {
     startOffset = ds->indexToFrame(_pageDataPresentation->dataRange()->start(), _pageDataPresentation->dataRange()->startUnits());
   }
-
+  
   if (customRangeCount) {
-    rangeCount = _pageDataPresentation->dataRange()->range()*ds->framePerIndex(_pageDataPresentation->dataRange()->rangeUnits());
+    double framesPerIndex = ds->framePerIndex(_pageDataPresentation->dataRange()->rangeUnits());
+    rangeCount = _pageDataPresentation->dataRange()->range()*framesPerIndex;
   }
 
   bool separate_tabs =
@@ -1006,18 +1007,18 @@ void DataWizard::finished() {
 
     dxv->writeLock();
     dxv->change(ds, field,
-        _pageDataPresentation->dataRange()->countFromEnd() ? -1 : startOffset,
-        _pageDataPresentation->dataRange()->readToEnd() ? -1 : rangeCount,
+        startOffset, _pageDataPresentation->dataRange()->countFromEnd(),
+        rangeCount, _pageDataPresentation->dataRange()->readToEnd(),
         _pageDataPresentation->dataRange()->skip(),
         _pageDataPresentation->dataRange()->doSkip(),
         _pageDataPresentation->dataRange()->doFilter());
 
     if (customStartIndex) {
-      dxv->setStartUnits(_pageDataPresentation->dataRange()->_startUnits->currentText());
+      dxv->setStartUnits(_pageDataPresentation->dataRange()->startUnits());
     }
 
     if (customRangeCount) {
-      dxv->setRangeUnits(_pageDataPresentation->dataRange()->_rangeUnits->currentText());
+      dxv->setRangeUnits(_pageDataPresentation->dataRange()->rangeUnits());
     }
 
     dxv->registerChange();
@@ -1027,7 +1028,7 @@ void DataWizard::finished() {
     xv = kst_cast<Vector>(_pageDataPresentation->selectedVector());
   }
 
-  bool xAxisIsTime = xv->isTime();
+  bool xAxisIsTime = xv->isCTime();
 
   {
     DataVectorPtr vector;
@@ -1040,18 +1041,18 @@ void DataWizard::finished() {
 
       vector->writeLock();
       vector->change(ds, field,
-          _pageDataPresentation->dataRange()->countFromEnd() ? -1 : startOffset,
-          _pageDataPresentation->dataRange()->readToEnd() ? -1 : rangeCount,
+          startOffset, _pageDataPresentation->dataRange()->countFromEnd(),
+          rangeCount, _pageDataPresentation->dataRange()->readToEnd(),
           _pageDataPresentation->dataRange()->skip(),
           _pageDataPresentation->dataRange()->doSkip(),
           _pageDataPresentation->dataRange()->doFilter());
 
       if (customStartIndex) {
-        vector->setStartUnits(_pageDataPresentation->dataRange()->_startUnits->currentText());
+        vector->setStartUnits(_pageDataPresentation->dataRange()->startUnits());
       }
 
       if (customRangeCount) {
-        vector->setRangeUnits(_pageDataPresentation->dataRange()->_rangeUnits->currentText());
+        vector->setRangeUnits(_pageDataPresentation->dataRange()->rangeUnits());
       }
 
       vector->registerChange();

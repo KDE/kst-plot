@@ -17,6 +17,7 @@
 #include "ui_datarange.h"
 
 #include "kstwidgets_export.h"
+#include "datasource.h"
 
 namespace Kst {
 
@@ -33,7 +34,7 @@ class  KSTWIDGETS_EXPORT DataRange : public QWidget, public Ui::DataRange {
     void setStart(qreal start, bool callUpdateFields = true);
 
     QString startUnits() const;
-    int startUnitsIndex() const;
+    // int startUnitsIndex() const;
     void setStartUnits(const QString &startUnits);
 
     qreal range() const;
@@ -44,13 +45,23 @@ class  KSTWIDGETS_EXPORT DataRange : public QWidget, public Ui::DataRange {
     bool lastDirty() const;
     void setLast(qreal last, bool callUpdateFields = true);
 
-    void updateIndexList(const QStringList &indexFields);
+    void updateIndexList(const QList<Kst::IndexFieldProperties> &indexFields);
     void clearIndexList();
 
-    //FIXME Probably should be an enum...
+    QList<Kst::IndexFieldProperties> indexFieldProperties() const { return _indexFieldProps; }
+
     QString rangeUnits() const;
-    int rangeUnitsIndex() const;
+    // int rangeUnitsIndex() const;
     void setRangeUnits(const QString &rangeUnits);
+
+    // helpers for current selection
+    bool startIsFrame() const;
+    bool startIsSeconds() const;
+    bool startIsCTime() const;
+
+    bool rangeIsFrame() const;
+    bool rangeIsSeconds() const;
+    bool rangeIsCTime() const;
 
     int skip() const;
     bool skipDirty() const;
@@ -99,6 +110,7 @@ class  KSTWIDGETS_EXPORT DataRange : public QWidget, public Ui::DataRange {
     QString _requestedStartUnits;
     ControlField _controlField0;
     ControlField _controlField1;
+    QList<Kst::IndexFieldProperties> _indexFieldProps;
 };
 
 }

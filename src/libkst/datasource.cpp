@@ -63,7 +63,7 @@ struct NotSupportedImp : public DataSource::DataInterface<T>
   bool isValid(const QString&) const { return false; }
 
   // T specific
-  const typename T::DataInfo dataInfo(const QString&, int frame=0) const { Q_UNUSED(frame) return typename T::DataInfo(); }
+  const typename T::DataInfo dataInfo(const QString&, double frame=0) const { Q_UNUSED(frame) return typename T::DataInfo(); }
   void setDataInfo(const QString&, const typename T::DataInfo&) {}
 
   // meta data
@@ -356,55 +356,41 @@ void DataSource::reset() {
 }
 
 
-bool DataSource::supportsTimeConversions() const {
-  return false;
-}
+// bool DataSource::supportsTimeConversions() const {
+//   return false;
+// }
 
 QString DataSource::timeFormat() const {
   return QString();
 }
 
-int DataSource::sampleForTime(const QDateTime& time, bool *ok) {
-  Q_UNUSED(time)
-  if (ok) {
-    *ok = false;
-  }
-  return 0;
-}
+// int DataSource::sampleForTime(const QDateTime& time, bool *ok) {
+//   Q_UNUSED(time)
+//   if (ok) {
+//     *ok = false;
+//   }
+//   return 0;
+// }
 
 
 
-int DataSource::sampleForTime(double ms, bool *ok) {
-  Q_UNUSED(ms)
-  if (ok) {
-    *ok = false;
-  }
-  return 0;
-}
+// int DataSource::sampleForTime(double ms, bool *ok) {
+//   Q_UNUSED(ms)
+//   if (ok) {
+//     *ok = false;
+//   }
+//   return 0;
+// }
 
 
 
-QDateTime DataSource::timeForSample(int sample, bool *ok) {
-  Q_UNUSED(sample)
-  if (ok) {
-    *ok = false;
-  }
-  return QDateTime::currentDateTime();
-}
-
-
-bool DataSource::isTime(const QString& field) const {
-  return (_timeFields.contains(field));
-}
-
-
-double DataSource::relativeTimeForSample(int sample, bool *ok) {
-  Q_UNUSED(sample)
-  if (ok) {
-    *ok = false;
-  }
-  return 0;
-}
+// QDateTime DataSource::timeForSample(int sample, bool *ok) {
+//   Q_UNUSED(sample)
+//   if (ok) {
+//     *ok = false;
+//   }
+//   return QDateTime::currentDateTime();
+// }
 
 
 double DataSource::frameToIndex(int frame, const QString &field) {
@@ -468,7 +454,6 @@ double DataSource::framePerIndex(const QString &field) {
 
   double x0 = readDespikedIndex(f0, field);
   double xn = readDespikedIndex(fn, field);
-
   if (xn == x0) {
     return 1.0;
   }
@@ -495,7 +480,12 @@ double DataSource::readDespikedIndex(int frame_in, const QString &field) {
   if (frame + 2*margin_frames >= info.frameCount) {
     frame = info.frameCount - 2*margin_frames;
   }
-  DataVector::ReadInfo par = {data, frame, 2*margin_frames, -1};
+  DataVector::ReadInfo par;
+  par.data = data;
+  par.startingFrame = (double)frame;
+  par.numberOfFrames = (double)(2*margin_frames);
+  par.skipFrame = -1;
+  par.singleSample = false;
 
   vector().read(field, par);
 
@@ -523,37 +513,23 @@ double DataSource::readDespikedIndex(int frame_in, const QString &field) {
 }
 
 
-QStringList &DataSource::timeFields() {
-  if (_timeFields.size() == 0) {
-    // FIXME: this must be created by the UI somehow.
-    // or by the datasource itself.  Or something
-    // different than this!
-    QStringList requestedFields;
-    requestedFields.append("TIME");
-    requestedFields.append("Time");
-    requestedFields.append("time");
-    requestedFields.append("Temps");
-    requestedFields.append("TEMPS");
-    requestedFields.append("temps");
+const QList<IndexFieldProperties>& DataSource::indexFieldProperties() {
+  if (_indexFieldProps.isEmpty()) {
+    _indexFieldProps.append({tr("frames"), true, false, false});
 
-    // Make sure the requested fields actually exist.
+    // Heuristic: auto-detect time fields by well-known names.
+    // FIXME: these should ideally be declared by the datasource itself.
+    const QStringList requestedFields = {
+      "TIME", "Time", "time", "Temps", "TEMPS", "temps"
+    };
     foreach (const QString &field, requestedFields) {
       if (vector().list().contains(field)) {
-        _timeFields.append(field);
+        // treat any auto-detected time field as both ctime and seconds
+        _indexFieldProps.append({field, false, true, true});
       }
     }
   }
-
-  return(_timeFields);
-}
-
-QStringList &DataSource::indexFields() {
-  if (_frameFields.size() == 0) {
-    _frameFields.append(tr("frames"));
-    _frameFields.append(timeFields());
-  }
-
-  return(_frameFields);
+  return _indexFieldProps;
 }
 
 bool DataSource::reusable() const {

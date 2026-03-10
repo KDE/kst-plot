@@ -65,7 +65,7 @@ public:
   bool isValid(const QString&) const;
 
   // T specific
-  const DataString::DataInfo dataInfo(const QString&, int frame=0) const { Q_UNUSED(frame) return DataString::DataInfo(); }
+  const DataString::DataInfo dataInfo(const QString&, double frame=0) const { Q_UNUSED(frame) return DataString::DataInfo(); }
   void setDataInfo(const QString&, const DataString::DataInfo&) {}
 
   // meta data
@@ -118,7 +118,7 @@ public:
   bool isValid(const QString&) const;
 
   // T specific
-  const DataMatrix::DataInfo dataInfo(const QString&, int frame=0) const;
+  const DataMatrix::DataInfo dataInfo(const QString&, double frame=0) const;
   void setDataInfo(const QString&, const DataMatrix::DataInfo&) {}
 
   // meta data
@@ -169,7 +169,7 @@ void DataInterfaceFitsImageMatrix::init()
   }
 }
 
-const DataMatrix::DataInfo DataInterfaceFitsImageMatrix::dataInfo(const QString& matrix, int frame) const
+const DataMatrix::DataInfo DataInterfaceFitsImageMatrix::dataInfo(const QString& matrix, double frame) const
 {
   Q_UNUSED(frame)
   long n_axes[3];
@@ -404,7 +404,7 @@ public:
   bool isValid(const QString&) const;
 
   // T specific
-  const DataVector::DataInfo dataInfo(const QString&, int frame=0) const;
+  const DataVector::DataInfo dataInfo(const QString&, double frame=0) const;
   void setDataInfo(const QString&, const DataVector::DataInfo&) {}
 
   // meta data
@@ -464,7 +464,7 @@ void DataInterfaceFitsImageVector::init()
 }
 
 
-const DataVector::DataInfo DataInterfaceFitsImageVector::dataInfo(const QString& field, int frame) const
+const DataVector::DataInfo DataInterfaceFitsImageVector::dataInfo(const QString& field, double frame) const
 {
   Q_UNUSED(frame)
   long n_axes[3];
@@ -538,14 +538,13 @@ int DataInterfaceFitsImageVector::read(const QString& field, DataVector::ReadInf
 
   // INDEX is a synthetic field representing linear pixel indices
   if (field == "INDEX") {
-    int s = p.startingFrame;
-    int n = p.numberOfFrames;
-    if (n == -1) n = 1;
+    qint64 s = (qint64)p.startingFrame;
+    qint64 n = p.singleSample ? 1 : (qint64)p.numberOfFrames;
     if (n < 0) return 0;
-    for (int i = 0; i < n; ++i) {
+    for (qint64 i = 0; i < n; ++i) {
       p.data[i] = i + s;
     }
-    return n;
+    return (int)n;
   }
 
   if (!_matrixHash.contains(field)) {
@@ -594,9 +593,8 @@ int DataInterfaceFitsImageVector::read(const QString& field, DataVector::ReadInf
     }
   }
 
-  int s = p.startingFrame;
-  int n = p.numberOfFrames;
-  if (n == -1) n = 1;
+  qint64 s = (qint64)p.startingFrame;
+  qint64 n = p.singleSample ? 1 : (qint64)p.numberOfFrames;
   if (n <= 0) {
     free(buffer);
     return 0;
@@ -608,11 +606,11 @@ int DataInterfaceFitsImageVector::read(const QString& field, DataVector::ReadInf
     s = 0;
   }
   if (maxAvail < 0) maxAvail = 0;
-  if ((long)n > maxAvail) n = (int)maxAvail;
+  if ((long)n > maxAvail) n = (qint64)maxAvail;
   int xSize = (int)n_axes[0];
 
-  for (int i = 0; i < n; ++i) {
-    long idx = s + i;
+  for (qint64 i = 0; i < n; ++i) {
+    long idx = (long)(s + i);
     if (idx < 0 || idx >= n_elements) {
       p.data[i] = NAN;
     } else {

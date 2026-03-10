@@ -90,15 +90,21 @@ void DataRange::setLast(qreal last, bool callUpdateFields) {
 void DataRange::clearIndexList() {
   _startUnits->clear();
   _rangeUnits->clear();
+  _indexFieldProps.clear();
 }
 
 
-void DataRange::updateIndexList(const QStringList &indexFields) {
+void DataRange::updateIndexList(const QList<Kst::IndexFieldProperties> &indexFields) {
+  _indexFieldProps = indexFields;
+  QStringList names;
+  for (const Kst::IndexFieldProperties& ifp : indexFields) {
+    names.append(ifp.name);
+  }
   _startUnits->clear();
-  _startUnits->addItems(indexFields);
+  _startUnits->addItems(names);
   setStartUnits(_requestedStartUnits);
   _rangeUnits->clear();
-  _rangeUnits->addItems(indexFields);
+  _rangeUnits->addItems(names);
   setRangeUnits(_requestedRangeUnits);
 }
 
@@ -108,9 +114,9 @@ QString DataRange::startUnits() const {
 }
 
 
-int DataRange::startUnitsIndex() const {
-  return _startUnits->currentIndex();
-}
+// int DataRange::startUnitsIndex() const {
+//   return _startUnits->currentIndex();
+// }
 
 
 void DataRange::setStartUnits(const QString &startUnits) {
@@ -126,9 +132,9 @@ qreal DataRange::range() const {
 }
 
 
-int DataRange::rangeUnitsIndex()  const {
-  return _rangeUnits->currentIndex();
-}
+// int DataRange::rangeUnitsIndex()  const {
+//   return _rangeUnits->currentIndex();
+// }
 
 
 bool DataRange::rangeDirty() const {
@@ -157,6 +163,51 @@ void DataRange::setRangeUnits(const QString &rangeUnits) {
   } else {
     _rangeUnits->setCurrentIndex(0);
   }
+}
+
+
+// helper implementations ---------------------------------------------------
+static const Kst::IndexFieldProperties* findField(const QList<Kst::IndexFieldProperties>& list, const QString &name) {
+    for (const Kst::IndexFieldProperties &ifp : list) {
+        if (ifp.name == name) return &ifp;
+    }
+    return nullptr;
+}
+
+bool DataRange::startIsFrame() const {
+    const QString name = startUnits();
+    const Kst::IndexFieldProperties *ifp = findField(_indexFieldProps, name);
+    return ifp ? ifp->is_frame : false;
+}
+
+bool DataRange::startIsSeconds() const {
+    const QString name = startUnits();
+    const Kst::IndexFieldProperties *ifp = findField(_indexFieldProps, name);
+    return ifp ? ifp->is_seconds : false;
+}
+
+bool DataRange::startIsCTime() const {
+    const QString name = startUnits();
+    const Kst::IndexFieldProperties *ifp = findField(_indexFieldProps, name);
+    return ifp ? ifp->is_ctime : false;
+}
+
+bool DataRange::rangeIsFrame() const {
+    const QString name = rangeUnits();
+    const Kst::IndexFieldProperties *ifp = findField(_indexFieldProps, name);
+    return ifp ? ifp->is_frame : false;
+}
+
+bool DataRange::rangeIsSeconds() const {
+    const QString name = rangeUnits();
+    const Kst::IndexFieldProperties *ifp = findField(_indexFieldProps, name);
+    return ifp ? ifp->is_seconds : false;
+}
+
+bool DataRange::rangeIsCTime() const {
+    const QString name = rangeUnits();
+    const Kst::IndexFieldProperties *ifp = findField(_indexFieldProps, name);
+    return ifp ? ifp->is_ctime : false;
 }
 
 
