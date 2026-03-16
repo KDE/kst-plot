@@ -25,6 +25,7 @@
 #include "datasourcepluginmanager.h"
 #include "dialogdefaults.h"
 #include "debug.h"
+#include "datarangeconversion.h"
 
 #include <QDir>
 #include <QThreadPool>
@@ -389,8 +390,8 @@ void VectorDialog::configureTab(ObjectPtr vector) {
 
     _vectorTab->dataRange()->setRangeUnits(dataVector->rangeUnits());
     if ( !_vectorTab->dataRange()->rangeIsFrame()) {
-      double frame_per_index = dataVector->dataSource()->framePerIndex(dataVector->startUnits());
-      if (frame_per_index == 0) {
+      double frame_per_index = dataVector->dataSource()->framePerIndex(dataVector->rangeUnits());
+      if (!qIsFinite(frame_per_index) || frame_per_index <= 0.0) {
         frame_per_index = 1.0;
       }
       _vectorTab->dataRange()->setRange(dataVector->numFrames()/frame_per_index);
@@ -451,11 +452,17 @@ ObjectPtr VectorDialog::createNewDataObject() {
 
 
 void VectorTab::updateIndexList(DataSourcePtr dataSource) {
-  dataRange()->updateIndexList(dataSource->indexFieldProperties());
+  dataRange()->setDataSource(dataSource);
+  if (dataSource) {
+    dataRange()->updateIndexList(dataSource->indexFieldProperties());
+  } else {
+    dataRange()->clearIndexList();
+  }
 }
 
 
 void VectorTab::clearIndexList() {
+  dataRange()->setDataSource(DataSourcePtr());
   dataRange()->clearIndexList();
 }
 
@@ -480,13 +487,31 @@ ObjectPtr VectorDialog::createNewDataVector() {
 
   double startOffset = dataRange->start();
   double rangeCount = dataRange->range();
+  if (!DataRangeConversion::resolveToFrameRange(dataRange,
+                                                _vectorTab->dataSource(),
+                                                field,
+                                                &startOffset,
+                                                &rangeCount,
+                                                0,
+                                                0)) {
+    if ((!dataRange->startIsFrame()) && (!dataRange->countFromEnd())) {
+      startOffset = _vectorTab->dataSource()->indexToFrame(dataRange->start(), dataRange->startUnits());
+    }
 
-  if ((dataRange->startIsFrame()) && (!dataRange->countFromEnd())) {
-    startOffset = _vectorTab->dataSource()->indexToFrame(dataRange->start(), dataRange->startUnits());
+    if ((!dataRange->rangeIsFrame()) && (!dataRange->readToEnd())) {
+      double framesPerIndex = _vectorTab->dataSource()->framePerIndex(dataRange->rangeUnits());
+      if (!qIsFinite(framesPerIndex) || framesPerIndex <= 0.0) {
+        framesPerIndex = 1.0;
+      }
+      rangeCount = dataRange->range()*framesPerIndex;
+    }
   }
 
-  if ((!dataRange->rangeIsFrame()) && (!dataRange->readToEnd())) {
-    rangeCount = dataRange->range()*_vectorTab->dataSource()->framePerIndex(dataRange->rangeUnits());
+  if (!dataRange->countFromEnd() && (!qIsFinite(startOffset) || startOffset < 0.0)) {
+    startOffset = 0.0;
+  }
+  if (!dataRange->readToEnd() && (!qIsFinite(rangeCount) || rangeCount < 1.0)) {
+    rangeCount = 1.0;
   }
 
   vector->writeLock();
@@ -585,13 +610,31 @@ ObjectPtr VectorDialog::editExistingDataObject() const {
 
       double startOffset = dataRange->start();
       double rangeCount = dataRange->range();
+      if (!DataRangeConversion::resolveToFrameRange(dataRange,
+                                                    _vectorTab->dataSource(),
+                                                    field,
+                                                    &startOffset,
+                                                    &rangeCount,
+                                                    0,
+                                                    0)) {
+        if ((!dataRange->startIsFrame()) && (!dataRange->countFromEnd())) {
+          startOffset = _vectorTab->dataSource()->indexToFrame(dataRange->start(), dataRange->startUnits());
+        }
 
-      if ((!dataRange->startIsFrame()) && (!dataRange->countFromEnd())) {
-        startOffset = _vectorTab->dataSource()->indexToFrame(dataRange->start(), dataRange->startUnits());
+        if ((!dataRange->rangeIsFrame()) && (!dataRange->readToEnd())) {
+          double framesPerIndex = _vectorTab->dataSource()->framePerIndex(dataRange->rangeUnits());
+          if (!qIsFinite(framesPerIndex) || framesPerIndex <= 0.0) {
+            framesPerIndex = 1.0;
+          }
+          rangeCount = dataRange->range()*framesPerIndex;
+        }
       }
 
-      if ((dataRange->rangeIsFrame()) && (!dataRange->readToEnd())) {
-        rangeCount = dataRange->range()*_vectorTab->dataSource()->framePerIndex(dataRange->rangeUnits()) + 0.0001;
+      if (!dataRange->countFromEnd() && (!qIsFinite(startOffset) || startOffset < 0.0)) {
+        startOffset = 0.0;
+      }
+      if (!dataRange->readToEnd() && (!qIsFinite(rangeCount) || rangeCount < 1.0)) {
+        rangeCount = 1.0;
       }
 
 

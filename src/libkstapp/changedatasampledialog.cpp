@@ -23,6 +23,7 @@
 #include "dialogdefaults.h"
 #include "updatemanager.h"
 #include "updateserver.h"
+#include "datarangeconversion.h"
 
 #include <QMessageBox>
 
@@ -158,6 +159,11 @@ void ChangeDataSampleDialog::updateIndexEntries() {
     }
   }
 
+  if (data_sources.size() == 1) {
+    _dataRange->setDataSource(data_sources[0]);
+  } else {
+    _dataRange->setDataSource(DataSourcePtr());
+  }
   _dataRange->updateIndexList(index_fields);
 }
 
@@ -351,13 +357,17 @@ void ChangeDataSampleDialog::apply() {
   for (int i = 0; i < selectedItems.size(); ++i) {
     QString filename;
     DataSourcePtr datasource;
+    QString field;
     bool valid = false;
+    bool isVector = false;
     bool use_custom_start_index = false;
     bool use_custom_range_index = false;
     if (DataVectorPtr vector = kst_cast<DataVector>(_store->retrieveObject(selectedItems.at(i)->text()))) {
       filename = vector->filename();
       datasource = vector->dataSource();
+      field = vector->field();
       valid = true;
+      isVector = true;
       use_custom_range_index = custom_range_index;
       use_custom_start_index = custom_start_index;
     } else if (DataMatrixPtr matrix = kst_cast<DataMatrix>(_store->retrieveObject(selectedItems.at(i)->text()))) {
@@ -375,22 +385,45 @@ void ChangeDataSampleDialog::apply() {
         double r;
         bool cfe = false; // countFromEnd
         bool rte = false; // readToEnd
-        if (use_custom_start_index) {
-          f0 = datasource->indexToFrame(_dataRange->start(), start_units);
-        } else if (_dataRange->countFromEnd()) {
-          f0 = -1; // keep -1 for matrix/vscalar backward compat
-          cfe = true;
-        } else {
-          f0 = _dataRange->start();
+
+        bool converted = false;
+        if (isVector && (use_custom_start_index || use_custom_range_index)) {
+          double startOffset = _dataRange->start();
+          double rangeCount = _dataRange->range();
+          converted = DataRangeConversion::resolveToFrameRange(_dataRange,
+                                                               datasource,
+                                                               field,
+                                                               &startOffset,
+                                                               &rangeCount,
+                                                               0,
+                                                               0);
+          if (converted) {
+            f0 = _dataRange->countFromEnd() ? -1 : startOffset;
+            r = _dataRange->readToEnd() ? -1 : rangeCount;
+            cfe = _dataRange->countFromEnd();
+            rte = _dataRange->readToEnd();
+          }
         }
-        if (use_custom_range_index) {
-          r = _dataRange->range()*datasource->framePerIndex(range_units);
-        } else if (_dataRange->readToEnd()) {
-          r = -1; // keep -1 for matrix/vscalar backward compat
-          rte = true;
-        } else {
-          r = _dataRange->range();
+
+        if (!converted) {
+          if (use_custom_start_index) {
+            f0 = datasource->indexToFrame(_dataRange->start(), start_units);
+          } else if (_dataRange->countFromEnd()) {
+            f0 = -1; // keep -1 for matrix/vscalar backward compat
+            cfe = true;
+          } else {
+            f0 = _dataRange->start();
+          }
+          if (use_custom_range_index) {
+            r = _dataRange->range()*datasource->framePerIndex(range_units);
+          } else if (_dataRange->readToEnd()) {
+            r = -1; // keep -1 for matrix/vscalar backward compat
+            rte = true;
+          } else {
+            r = _dataRange->range();
+          }
         }
+
         f0_map.insert(filename, f0);
         r_map.insert(filename, r);
         countFromEnd_map.insert(filename, cfe);
@@ -414,7 +447,7 @@ void ChangeDataSampleDialog::apply() {
                             _dataRange->doSkip(),
                             _dataRange->doFilter());
       vector->setStartUnits(start_units);
-      vector->setRangeUnits(start_units);
+      vector->setRangeUnits(range_units);
       vector->registerChange();
       vector->unlock();
     } else if (DataMatrixPtr matrix = kst_cast<DataMatrix>(_store->retrieveObject(selectedItems.at(i)->text()))) {
@@ -427,7 +460,7 @@ void ChangeDataSampleDialog::apply() {
         matrix->setFrame((int)(from+range-1));
       }
       matrix->setStartUnits(start_units);
-      matrix->setRangeUnits(start_units);
+      matrix->setRangeUnits(range_units);
       matrix->registerChange();
       matrix->unlock();
     } else if (VScalarPtr vscalar = kst_cast<VScalar>(_store->retrieveObject(selectedItems.at(i)->text()))) {
@@ -436,7 +469,7 @@ void ChangeDataSampleDialog::apply() {
       double range = r_map.value(vscalar->filename());
       vscalar->changeFrame((int)(from+range-1));
       //vscalar->setStartUnits(start_units);
-      //vscalar->setRangeUnits(start_units);
+      //vscalar->setRangeUnits(range_units);
       vscalar->registerChange();
       vscalar->unlock();
     }

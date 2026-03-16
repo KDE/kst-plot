@@ -37,6 +37,7 @@
 #include "boxitem.h"
 #include "updateserver.h"
 #include "geticon.h"
+#include "datarangeconversion.h"
 
 
 namespace Kst {
@@ -171,6 +172,10 @@ void DataWizardPageDataSource::sourceValid(QString filename, int requestID) {
   }
   _pageValid = true;
   _dataSource = DataSourcePluginManager::findOrLoadSource(_store, filename, true);
+  if (_dataSource) {
+    _dataSource->enableUpdates();
+    _dataSource->internalDataSourceUpdate();
+  }
   connect(_dataSource, SIGNAL(progress(int,QString)), kstApp->mainWindow(), SLOT(updateProgress(int,QString)));
   _fileType->setText(_dataSource->fileType());  
 
@@ -745,9 +750,23 @@ void DataWizardPageDataPresentation::checkWarningLabel()
 }
 
 
+void DataWizardPageDataPresentation::initializePage() {
+  updateVectors();
+}
+
 void DataWizardPageDataPresentation::updateVectors() {
   _xVector->clear();
-  _xVector->addItems(((DataWizard*)wizard())->dataSourceFieldList());
+  DataWizard *dw = static_cast<DataWizard*>(wizard());
+  const DataSourcePtr dataSource = dw->dataSource();
+
+  QStringList fieldList;
+  QList<Kst::IndexFieldProperties> indexFields;
+  if (dataSource) {
+    fieldList = dw->dataSourceFieldList();
+    indexFields = dw->dataSourceIndexList();
+  }
+
+  _xVector->addItems(fieldList);
   _pageValid = validOptions();
 
   int x_index = _xVector->findText(dialogDefaults().value("curve/xvectorfield","INDEX").toString());
@@ -759,7 +778,8 @@ void DataWizardPageDataPresentation::updateVectors() {
   }
   _xVector->setCurrentIndex(x_index);
 
-  dataRange()->updateIndexList(((DataWizard*)wizard())->dataSourceIndexList());
+  dataRange()->setDataSource(dataSource);
+  dataRange()->updateIndexList(indexFields);
 
   emit completeChanged();
 }
@@ -868,7 +888,16 @@ QStringList DataWizard::dataSourceFieldList() const {
 }
 
 QList<Kst::IndexFieldProperties> DataWizard::dataSourceIndexList() const {
-  return _pageDataSource->dataSource()->indexFieldProperties();
+  DataSourcePtr ds = _pageDataSource->dataSource();
+  if (!ds) {
+    return QList<Kst::IndexFieldProperties>();
+  }
+  return ds->indexFieldProperties();
+}
+
+
+DataSourcePtr DataWizard::dataSource() const {
+  return _pageDataSource->dataSource();
 }
 
 
@@ -920,17 +949,27 @@ void DataWizard::finished() {
   double startOffset = _pageDataPresentation->dataRange()->start();
   double rangeCount = _pageDataPresentation->dataRange()->range();
 
-  bool customStartIndex = (!_pageDataPresentation->dataRange()->startIsFrame()) &&
-                          (!_pageDataPresentation->dataRange()->countFromEnd());
-  bool customRangeCount = (!_pageDataPresentation->dataRange()->rangeIsFrame()) &&
-                          (!_pageDataPresentation->dataRange()->readToEnd());
-  if (customStartIndex) {
-    startOffset = ds->indexToFrame(_pageDataPresentation->dataRange()->start(), _pageDataPresentation->dataRange()->startUnits());
-  }
-  
-  if (customRangeCount) {
-    double framesPerIndex = ds->framePerIndex(_pageDataPresentation->dataRange()->rangeUnits());
-    rangeCount = _pageDataPresentation->dataRange()->range()*framesPerIndex;
+  bool customStartIndex = false;
+  bool customRangeCount = false;
+  if (!DataRangeConversion::resolveToFrameRange(_pageDataPresentation->dataRange(),
+                                                ds,
+                                                _pageDataPresentation->vectorField(),
+                                                &startOffset,
+                                                &rangeCount,
+                                                &customStartIndex,
+                                                &customRangeCount)) {
+    customStartIndex = (!_pageDataPresentation->dataRange()->startIsFrame()) &&
+                       (!_pageDataPresentation->dataRange()->countFromEnd());
+    customRangeCount = (!_pageDataPresentation->dataRange()->rangeIsFrame()) &&
+                       (!_pageDataPresentation->dataRange()->readToEnd());
+    if (customStartIndex) {
+      startOffset = ds->indexToFrame(_pageDataPresentation->dataRange()->start(), _pageDataPresentation->dataRange()->startUnits());
+    }
+
+    if (customRangeCount) {
+      double framesPerIndex = ds->framePerIndex(_pageDataPresentation->dataRange()->rangeUnits());
+      rangeCount = _pageDataPresentation->dataRange()->range()*framesPerIndex;
+    }
   }
 
   bool separate_tabs =

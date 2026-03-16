@@ -45,6 +45,9 @@ class  KSTWIDGETS_EXPORT DataRange : public QWidget, public Ui::DataRange {
     bool lastDirty() const;
     void setLast(qreal last, bool callUpdateFields = true);
 
+    void setDataSource(const DataSourcePtr &dataSource);
+    DataSourcePtr dataSource() const;
+
     void updateIndexList(const QList<Kst::IndexFieldProperties> &indexFields);
     void clearIndexList();
 
@@ -106,11 +109,20 @@ class  KSTWIDGETS_EXPORT DataRange : public QWidget, public Ui::DataRange {
     void unitsChanged();
 
   private:
+    bool isFrameUnits(const QString &units);
+    bool canConvertUnits(const QString &units);
+    bool frameFromUnits(double value, const QString &units, bool roundUp, int *frameOut);
+    bool unitsFromFrame(int frame, const QString &units, double *valueOut);
+    int maxFrameForClamp(const QString &preferredUnits);
+
     QString _requestedRangeUnits;
     QString _requestedStartUnits;
+    QString _displayedStartUnits;
+    QString _displayedRangeUnits;
     ControlField _controlField0;
     ControlField _controlField1;
     QList<Kst::IndexFieldProperties> _indexFieldProps;
+    DataSourcePtr _dataSource;
 };
 
 }
