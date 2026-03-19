@@ -12,6 +12,7 @@
   <name xml:lang="ar">كاست</name>
   <name xml:lang="ca">Kst</name>
   <name xml:lang="ca-valencia">Kst</name>
+  <name xml:lang="cs">Kst</name>
   <name xml:lang="es">Kst</name>
   <name xml:lang="fr">Kst</name>
   <name xml:lang="gl">Kst</name>
@@ -27,6 +28,7 @@
   <summary xml:lang="ar">عارض بيانات</summary>
   <summary xml:lang="ca">Visualitzador de dades</summary>
   <summary xml:lang="ca-valencia">Visor de dades</summary>
+  <summary xml:lang="cs">Prohlížeč dat</summary>
   <summary xml:lang="es">Visor de datos</summary>
   <summary xml:lang="fr">Afficheur de données</summary>
   <summary xml:lang="gl">Visor de datos</summary>
