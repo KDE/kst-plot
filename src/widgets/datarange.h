@@ -31,6 +31,8 @@ class  KSTWIDGETS_EXPORT DataRange : public QWidget, public Ui::DataRange {
 
     qreal start() const;
     bool startDirty() const;
+    bool startIsDuration() const;
+    bool startIsISOTime() const;
     void setStart(qreal start, bool callUpdateFields = true);
 
     QString startUnits() const;
@@ -39,10 +41,13 @@ class  KSTWIDGETS_EXPORT DataRange : public QWidget, public Ui::DataRange {
 
     qreal range() const;
     bool rangeDirty() const;
+    bool rangeIsDuration() const;
     void setRange(qreal range, bool callUpdateFields = true);
 
     qreal last() const;
     bool lastDirty() const;
+    bool lastIsDuration() const;
+    bool lastIsISOTime() const;
     void setLast(qreal last, bool callUpdateFields = true);
 
     void setDataSource(const DataSourcePtr &dataSource);
@@ -107,13 +112,18 @@ class  KSTWIDGETS_EXPORT DataRange : public QWidget, public Ui::DataRange {
     void lastChanged();
     void rangeChanged();
     void unitsChanged();
+    void convertRangeToNumber();
+    void convertRangeToDuration();
+    void convertStartToNumber();
+    void convertStartToDuration();
+    void convertStartToISOTime();
 
   private:
     bool isFrameUnits(const QString &units);
     bool canConvertUnits(const QString &units);
     bool frameFromUnits(double value, const QString &units, bool roundUp, int *frameOut);
     bool unitsFromFrame(int frame, const QString &units, double *valueOut);
-    int maxFrameForClamp(const QString &preferredUnits);
+    // int maxFrameForClamp(const QString &preferredUnits);
 
     QString _requestedRangeUnits;
     QString _requestedStartUnits;

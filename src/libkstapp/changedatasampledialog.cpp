@@ -315,7 +315,6 @@ void ChangeDataSampleDialog::apply() {
   bool custom_start_index = (!_dataRange->startIsFrame()) && (!_dataRange->countFromEnd());
 
   bool custom_range_index = (!_dataRange->rangeIsFrame()) && (!_dataRange->readToEnd());
-
   if (!custom_start_index && !custom_range_index) { // FIXME: also for custom index.
     start_units.clear();
 
@@ -379,6 +378,7 @@ void ChangeDataSampleDialog::apply() {
       datasource = vscalar->dataSource();
       valid = true;
     }
+
     if (valid) {
       if (!f0_map.contains(filename)) {
         double f0;
@@ -387,6 +387,7 @@ void ChangeDataSampleDialog::apply() {
         bool rte = false; // readToEnd
 
         bool converted = false;
+
         if (isVector && (use_custom_start_index || use_custom_range_index)) {
           double startOffset = _dataRange->start();
           double rangeCount = _dataRange->range();
@@ -405,8 +406,10 @@ void ChangeDataSampleDialog::apply() {
           }
         }
 
+
         if (!converted) {
           if (use_custom_start_index) {
+
             f0 = datasource->indexToFrame(_dataRange->start(), start_units);
           } else if (_dataRange->countFromEnd()) {
             f0 = -1; // keep -1 for matrix/vscalar backward compat

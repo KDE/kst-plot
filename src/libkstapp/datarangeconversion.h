@@ -20,22 +20,28 @@
 namespace Kst {
 namespace DataRangeConversion {
 
-inline bool isFrameUnits(const DataRange *dataRange, const QString &units) {
+// Determine if index field refered to by label are frame units
+inline bool isFrameUnits(const DataRange *dataRange, const QString &label) {
   if (!dataRange) {
     return false;
   }
 
-  const QList<Kst::IndexFieldProperties> fields = dataRange->indexFieldProperties();
+  const QList<Kst::IndexFieldProperties> fields =
+      dataRange->indexFieldProperties();
   foreach (const Kst::IndexFieldProperties &ifp, fields) {
-    if (ifp.name == units) {
+    if (ifp.name == label) {
       return ifp.is_frame;
     }
   }
 
-  return units.compare("frames", Qt::CaseInsensitive) == 0;
+  return label.compare("frames", Qt::CaseInsensitive) == 0;
 }
 
-inline int maxFrameLocked(DataSource *ds, const DataRange *dataRange, const QString &referenceField, const QString &unitsHint) {
+// determines the length of the data source by checking, in order, 
+// the length of the reference field, the units field, and any frame-counted field
+inline int maxFrameLocked(DataSource *ds, const DataRange *dataRange,
+                          const QString &referenceField,
+                          const QString &unitsHint) {
   if (!ds) {
     return -1;
   }
@@ -48,7 +54,8 @@ inline int maxFrameLocked(DataSource *ds, const DataRange *dataRange, const QStr
     }
   }
 
-  if (!unitsHint.isEmpty() && !isFrameUnits(dataRange, unitsHint) && ds->vector().isValid(unitsHint)) {
+  if (!unitsHint.isEmpty() && !isFrameUnits(dataRange, unitsHint) &&
+      ds->vector().isValid(unitsHint)) {
     const DataVector::DataInfo info = ds->vector().dataInfo(unitsHint);
     if (info.frameCount > 0) {
       return int(info.frameCount) - 1;
@@ -68,7 +75,9 @@ inline int maxFrameLocked(DataSource *ds, const DataRange *dataRange, const QStr
   return -1;
 }
 
-inline bool floorFrameLocked(DataSource *ds, const DataRange *dataRange, double value, const QString &units, const QString &referenceField, int *frameOut) {
+inline bool floorFrameLocked(DataSource *ds, const DataRange *dataRange,
+                             double value, const QString &units,
+                             const QString &referenceField, int *frameOut) {
   if (!frameOut) {
     return false;
   }
@@ -103,7 +112,8 @@ inline bool floorFrameLocked(DataSource *ds, const DataRange *dataRange, double 
       return false;
     }
 
-    *frameOut = qMax(0, int(qFloor(double(maxFrame) + (value - maxValue) * fps)));
+    *frameOut =
+        qMax(0, int(qFloor(double(maxFrame) + (value - maxValue) * fps)));
     return true;
   }
 
@@ -120,7 +130,9 @@ inline bool floorFrameLocked(DataSource *ds, const DataRange *dataRange, double 
   return true;
 }
 
-inline bool ceilFrameLocked(DataSource *ds, const DataRange *dataRange, double value, const QString &units, const QString &referenceField, int *frameOut) {
+inline bool ceilFrameLocked(DataSource *ds, const DataRange *dataRange,
+                            double value, const QString &units,
+                            const QString &referenceField, int *frameOut) {
   if (!frameOut) {
     return false;
   }
@@ -155,7 +167,8 @@ inline bool ceilFrameLocked(DataSource *ds, const DataRange *dataRange, double v
       return false;
     }
 
-    *frameOut = qMax(0, int(qCeil(double(maxFrame) + (value - maxValue) * fps)));
+    *frameOut =
+        qMax(0, int(qCeil(double(maxFrame) + (value - maxValue) * fps)));
     return true;
   }
 
@@ -172,7 +185,10 @@ inline bool ceilFrameLocked(DataSource *ds, const DataRange *dataRange, double v
   return true;
 }
 
-inline bool unitsFromFrameLocked(DataSource *ds, const DataRange *dataRange, int frame, const QString &units, const QString &referenceField, double *valueOut) {
+inline bool unitsFromFrameLocked(DataSource *ds, const DataRange *dataRange,
+                                 int frame, const QString &units,
+                                 const QString &referenceField,
+                                 double *valueOut) {
   if (!valueOut) {
     return false;
   }
@@ -196,18 +212,18 @@ inline bool unitsFromFrameLocked(DataSource *ds, const DataRange *dataRange, int
 
   const double fps = ds->framePerIndex(units);
   const double valueAtMax = ds->frameToIndex(maxFrame, units);
-  *valueOut = (fps > 0.0) ? valueAtMax + double(frame - maxFrame) / fps
-                          : valueAtMax;
+  *valueOut =
+      (fps > 0.0) ? valueAtMax + double(frame - maxFrame) / fps : valueAtMax;
   return true;
 }
 
-// Resolve DataRange controls into frame-based start/count using inclusive semantics:
-// start uses floor, end uses ceil, and frame bounds are clamped to file limits.
+// Resolve DataRange controls into frame-based start/count using inclusive
+// semantics: start uses floor, end uses ceil, and frame bounds are clamped to
+// file limits.
 inline bool resolveToFrameRange(const DataRange *dataRange,
                                 DataSourcePtr dataSource,
                                 const QString &referenceField,
-                                double *startOffset,
-                                double *rangeCount,
+                                double *startOffset, double *rangeCount,
                                 bool *customStartIndex,
                                 bool *customRangeCount) {
   if (!dataRange || !dataSource || !startOffset || !rangeCount) {
@@ -225,7 +241,8 @@ inline bool resolveToFrameRange(const DataRange *dataRange,
 
   int startFrame = qFloor(dataRange->start());
   if (!dataRange->countFromEnd()) {
-    if (!floorFrameLocked(ds, dataRange, dataRange->start(), startUnits, referenceField, &startFrame)) {
+    if (!floorFrameLocked(ds, dataRange, dataRange->start(), startUnits,
+                          referenceField, &startFrame)) {
       ds->unlock();
       return false;
     }
@@ -236,21 +253,25 @@ inline bool resolveToFrameRange(const DataRange *dataRange,
   if (!dataRange->readToEnd()) {
     if (dataRange->countFromEnd()) {
       if (!isFrameUnits(dataRange, rangeUnits)) {
-        const int endFrame = maxFrameLocked(ds, dataRange, referenceField, rangeUnits);
+        const int endFrame =
+            maxFrameLocked(ds, dataRange, referenceField, rangeUnits);
         if (endFrame < 0) {
           ds->unlock();
           return false;
         }
 
         double endExclusiveInRangeUnits = 0;
-        if (!unitsFromFrameLocked(ds, dataRange, endFrame + 1, rangeUnits, referenceField, &endExclusiveInRangeUnits)) {
+        if (!unitsFromFrameLocked(ds, dataRange, endFrame + 1, rangeUnits,
+                                  referenceField, &endExclusiveInRangeUnits)) {
           ds->unlock();
           return false;
         }
 
-        const double startInRangeUnits = endExclusiveInRangeUnits - dataRange->range();
+        const double startInRangeUnits =
+            endExclusiveInRangeUnits - dataRange->range();
         int computedStartFrame = 0;
-        if (!floorFrameLocked(ds, dataRange, startInRangeUnits, rangeUnits, referenceField, &computedStartFrame)) {
+        if (!floorFrameLocked(ds, dataRange, startInRangeUnits, rangeUnits,
+                              referenceField, &computedStartFrame)) {
           ds->unlock();
           return false;
         }
@@ -265,13 +286,16 @@ inline bool resolveToFrameRange(const DataRange *dataRange,
         endFrame = qMax(0, startFrame + span - 1);
       } else {
         double startInRangeUnits = 0;
-        if (!unitsFromFrameLocked(ds, dataRange, startFrame, rangeUnits, referenceField, &startInRangeUnits)) {
+        if (!unitsFromFrameLocked(ds, dataRange, startFrame, rangeUnits,
+                                  referenceField, &startInRangeUnits)) {
           ds->unlock();
           return false;
         }
 
         int exclusiveEndFrame = 0;
-        if (!ceilFrameLocked(ds, dataRange, startInRangeUnits + dataRange->range(), rangeUnits, referenceField, &exclusiveEndFrame)) {
+        if (!ceilFrameLocked(ds, dataRange,
+                             startInRangeUnits + dataRange->range(), rangeUnits,
+                             referenceField, &exclusiveEndFrame)) {
           ds->unlock();
           return false;
         }

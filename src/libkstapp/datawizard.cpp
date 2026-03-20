@@ -172,10 +172,16 @@ void DataWizardPageDataSource::sourceValid(QString filename, int requestID) {
   }
   _pageValid = true;
   _dataSource = DataSourcePluginManager::findOrLoadSource(_store, filename, true);
-  if (_dataSource) {
-    _dataSource->enableUpdates();
-    _dataSource->internalDataSourceUpdate();
-  }
+  // FIXME: TIME indexing requires that the file be fully indexable at data source
+  // initialization time.  The lines below make sure this is true.  However,
+  // this is extremely expensive for very large ascii files, so we don't do it - 
+  // instead waiting for finished() to do it.  Data sources that are fully indexable
+  // at creation (eg, dirfiles) don't need this, and so Time indexing works.
+  // Not sure what to do about this. :-/
+  // if (_dataSource) {
+    // _dataSource->enableUpdates();
+    // _dataSource->internalDataSourceUpdate();
+  // }
   connect(_dataSource, SIGNAL(progress(int,QString)), kstApp->mainWindow(), SLOT(updateProgress(int,QString)));
   _fileType->setText(_dataSource->fileType());  
 

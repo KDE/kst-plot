@@ -709,16 +709,10 @@ const QList<Kst::IndexFieldProperties>& AsciiSource::indexFieldProperties() {
     if (!_config._indexVector.value().isEmpty()) {
       switch (_config._indexInterpretation.value()) {
       case AsciiSourceConfig::CTime:
-        _indexFieldProps.append({_config._indexVector, false, true, true});
-        break;
       case AsciiSourceConfig::Seconds:
-        _indexFieldProps.append({_config._indexVector, false, false, true});
-        break;
       case AsciiSourceConfig::FormattedTime:
-        _indexFieldProps.append({_config._indexVector, false, true, true});
-        break;
       case AsciiSourceConfig::FixedRate:
-        _indexFieldProps.append({_config._indexVector, false, false, true});
+        _indexFieldProps.append({_config._indexVector, false, true, true});
         break;
       default:
         break; // Unknown / NoInterpretation: no index field added
