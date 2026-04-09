@@ -34,6 +34,7 @@ Comment[it]=Implementa un'estensione oggetto dati di mediana mobile per Kst.
 Comment[nl]=Implementeert een plug-in voor een gegevensobject in Kst voor lopende mediaan
 Comment[pl]=Implementuje wtyczkę obiektu danych mediany ruchomej dla Kst.
 Comment[pt_BR]=Implementa um plugin de objeto de dados medianos móveis para o Kst.
+Comment[sk]=Implementuje podporu pre čítanie súborov FITS do Kst.
 Comment[sl]=Implementira vtičnik drseče mediane podatkovnega predmeta za Kst.
 Comment[sv]=Implementerar ett Kst dataobjekt-insticksprogram för rörligt medianvärde.
 Comment[tr]=Kst için bir Hareketli Ortanca Veri Nesnesi Eklentisi uygular.

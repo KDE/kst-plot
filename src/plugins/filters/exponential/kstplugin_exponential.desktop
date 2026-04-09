@@ -34,6 +34,7 @@ Comment[it]=Implementa un'estensione oggetto dati filtro esponenziale per Kst.
 Comment[nl]=Implementeert een exponentiële plug-in voor een gegevensobject in Kst voor filteren.
 Comment[pl]=Implementuje wtyczkę obiektu danych filtra wykładniczego dla Kst.
 Comment[pt_BR]=Implementa um plugin de objeto de dados de filtro exponencial para o Kst.
+Comment[sk]=Implementuje podporu pre čítanie súborov FITS do Kst.
 Comment[sl]=Implementira vtičnik za eksponentni filter podatkovnega predmeta za Kst.
 Comment[sv]=Implementerar ett Kst dataobjekt-insticksprogram för exponentiellt filter.
 Comment[tr]=Kst için bir Üstel Süzgeç Veri Nesnesi Eklentisi uygular.

@@ -34,6 +34,7 @@ Comment[it]=Implementa un'estensione oggetto dati di media mobile per Kst.
 Comment[nl]=Implementeert een plug-in voor een gegevensobject in Kst voor lopend gemiddelde
 Comment[pl]=Implementuje wtyczkę obiektu danych średniej ruchomej dla Kst.
 Comment[pt_BR]=Implementa um plugin de objeto de dados de média móvel para o Kst.
+Comment[sk]=Implementuje podporu pre čítanie súborov FITS do Kst.
 Comment[sl]=Implementira vtičnik drsečega povprečja podatkovnega predmeta za Kst.
 Comment[sv]=Implementerar ett Kst dataobjekt-insticksprogram för rörligt medelvärde.
 Comment[tr]=Kst için bir Hareketli Ortalama Veri Nesnesi Eklentisi uygular.
