@@ -50,6 +50,7 @@ Comment[nl]=Implementeert ondersteuning voor het lezen van netCDF-bestanden in K
 Comment[pl]=Implementuj obsługę odczytu plików netCDF w Kst.
 Comment[pt]=Implementa o suporte para ler os ficheiros do netCDF no Kst.
 Comment[pt_BR]=Implementa o suporte para leitura de arquivos do netCDF no Kst.
+Comment[sk]=Implementuje podporu pre čítanie súborov netCDF do Kst.
 Comment[sl]=Izvaja podporo za branje datotek netCDF v Kst.
 Comment[sv]=Implementerar stöd för att läsa netCDF-filer i Kst.
 Comment[tr]=Kst içine netCDF dosyalarını okuma desteği ekler.

@@ -52,6 +52,7 @@ Comment[nl]=Implementeert ondersteuning voor het lezen van ASCII-bestanden in Ks
 Comment[pl]=Implementuj obsługę odczytu plików ASCII w Kst.
 Comment[pt]=Implementa o suporte para ler ficheiros ASCII para o Kst.
 Comment[pt_BR]=Implementa o suporte para leitura de arquivos ASCII no Kst.
+Comment[sk]=Implementuje podporu pre čítanie ASCII súborov do Kst.
 Comment[sl]=Izvaja podporo za branje datotek ASCII v Kst.
 Comment[sv]=Implementerar stöd för att läsa ASCII-filer i Kst.
 Comment[tr]=Kst içine ASCII dosyalarını okuma desteği ekler.
