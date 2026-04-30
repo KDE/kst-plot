@@ -61,6 +61,20 @@
     <p xml:lang="tr">Bu uygulama, bilimsel verileri görüntülemek için kullanılır.</p>
     <p xml:lang="uk">Цю програму призначено для показу наукових даних.</p>
   </description>
+  <screenshots>
+    <screenshot>
+      <image type="source">https://kst-plot.kde.org/screenshots/sessions/images_and_matrices.png</image>
+      <caption>Working with matrices and images</caption>
+    </screenshot>
+    <screenshot type="default">
+      <image type="source">https://kst-plot.kde.org/screenshots/sessions/non_modal_dialogs.png</image>
+      <caption>Non-modal dialogs allow you to use many tools simultaneously</caption>
+    </screenshot>
+    <screenshot>
+      <image type="source">https://kst-plot.kde.org/screenshots/dialogs/menu_plot_zoom.png</image>
+      <caption>Plot context menu with zoom options</caption>
+    </screenshot>
+  </screenshots>
   <url type="homepage">https://apps.kde.org/kst/</url>
   <url type="bugtracker">https://bugs.kde.org/enter_bug.cgi?product=kst</url>
   <url type="vcs-browser">https://invent.kde.org/graphics/kst-plot/</url>
