@@ -81,5 +81,6 @@
   <releases>
     <release version="3.0.0" date="2026-02-09"/>
     <release version="2.1.x" date="2025-07-21"/>
+    <release version="2.0.8" date="2014-07-20"/>
   </releases>
 </component>
