@@ -6,7 +6,7 @@
 <component type="desktop">
   <id>org.kde.kst</id>
   <provides>
-    <binary>kst2</binary>
+    <binary>kst</binary>
   </provides>
   <name>Kst</name>
   <name xml:lang="ar">كاست</name>
@@ -79,6 +79,7 @@
   <launchable type="desktop-id">org.kde.kst.desktop</launchable>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="3.0.0" date="2026-02-09"/>
     <release version="2.1.x" date="2025-07-21"/>
   </releases>
 </component>
