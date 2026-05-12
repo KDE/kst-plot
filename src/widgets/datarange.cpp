@@ -1345,8 +1345,6 @@ void DataRange::loadWidgetDefaults() {
 }
 
 bool DataRange::rangeIsValid() {
-  printf("DataRange::rangeIsValid: readToEnd=%d range=%g\n", readToEnd(),
-         range());
   if (readToEnd()) {
     return true;
   } else {
