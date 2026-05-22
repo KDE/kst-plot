@@ -40,7 +40,7 @@
   <summary xml:lang="sk">Prehliadač údajov</summary>
   <summary xml:lang="sl">Ogledovalnik podatkov</summary>
   <summary xml:lang="sv">Datavisning</summary>
-  <summary xml:lang="tr">Veri Görüntüleyicisi</summary>
+  <summary xml:lang="tr">Veri görüntüleyicisi</summary>
   <summary xml:lang="uk">Засіб перегляду даних</summary>
   <description>
     <p>This application is used to display scientific data.</p>
@@ -58,21 +58,42 @@
     <p xml:lang="sk">Táto aplikácia sa používa na zobrazovanie vedeckých údajov.</p>
     <p xml:lang="sl">Ta aplikacija se uporablja za prikaz znanstvenih podatkov.</p>
     <p xml:lang="sv">Programmet används för att visa vetenskaplig data.</p>
-    <p xml:lang="tr">Bu uygulama, bilimsel verileri görüntülemek için kullanılır.</p>
+    <p xml:lang="tr">Bilimsel verileri görüntülemek için bir uygulama</p>
     <p xml:lang="uk">Цю програму призначено для показу наукових даних.</p>
   </description>
   <screenshots>
     <screenshot>
       <image type="source">https://kst-plot.kde.org/screenshots/sessions/images_and_matrices.png</image>
       <caption>Working with matrices and images</caption>
+      <caption xml:lang="ca">Treballar amb matrius i imatges</caption>
+      <caption xml:lang="ca-valencia">Treballar amb matrius i imatges</caption>
+      <caption xml:lang="nl">Werken met matrixen en afbeeldingen</caption>
+      <caption xml:lang="pt-BR">Trabalhar com matrizes e imagens</caption>
+      <caption xml:lang="sl">Delo z matricami in slikami</caption>
+      <caption xml:lang="tr">Matrisler ve görsellerle çalışma</caption>
+      <caption xml:lang="uk">Робота з матрицями і зображеннями</caption>
     </screenshot>
     <screenshot type="default">
       <image type="source">https://kst-plot.kde.org/screenshots/sessions/non_modal_dialogs.png</image>
       <caption>Non-modal dialogs allow you to use many tools simultaneously</caption>
+      <caption xml:lang="ca">Els diàlegs no modals permeten utilitzar moltes eines simultàniament</caption>
+      <caption xml:lang="ca-valencia">Els diàlegs no modals permeten utilitzar moltes eines simultàniament</caption>
+      <caption xml:lang="nl">Niet-modale dialogen bieden u het tegelijk gebruiken van vele hulpmiddelen</caption>
+      <caption xml:lang="pt-BR">Diálogos não modais permitem que você use várias ferramentas simultaneamente</caption>
+      <caption xml:lang="sl">Nemodalna pogovorna okna omogočajo hkratno uporabo več orodij</caption>
+      <caption xml:lang="tr">Kipsel olmayan iletişim kutuları, birden çok aracı aynı anda kullanmanıza olanak tanır</caption>
+      <caption xml:lang="uk">За допомогою немодальних вікон ви можете користуватися декількома інструментами одночасно</caption>
     </screenshot>
     <screenshot>
       <image type="source">https://kst-plot.kde.org/screenshots/dialogs/menu_plot_zoom.png</image>
       <caption>Plot context menu with zoom options</caption>
+      <caption xml:lang="ca">Menú contextual de gràfic amb opcions de zoom</caption>
+      <caption xml:lang="ca-valencia">Menú contextual de gràfic amb opcions de zoom</caption>
+      <caption xml:lang="nl">Contextmenu van plot met opties voor zoomen</caption>
+      <caption xml:lang="pt-BR">Menu de contexto do gráfico com opções de zoom</caption>
+      <caption xml:lang="sl">Kontekstni meni za risanje z možnostmi povečave</caption>
+      <caption xml:lang="tr">Yakınlaştırma seçenekleriyle çizim bağlam menüsü</caption>
+      <caption xml:lang="uk">Контекстне меню креслення з варіантами масштабування</caption>
     </screenshot>
   </screenshots>
   <url type="homepage">https://apps.kde.org/kst/</url>
