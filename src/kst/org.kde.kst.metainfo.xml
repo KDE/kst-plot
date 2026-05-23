@@ -65,8 +65,10 @@
     <screenshot>
       <image type="source">https://kst-plot.kde.org/screenshots/sessions/images_and_matrices.png</image>
       <caption>Working with matrices and images</caption>
+      <caption xml:lang="ar">العمل مع المصفوفات والصور</caption>
       <caption xml:lang="ca">Treballar amb matrius i imatges</caption>
       <caption xml:lang="ca-valencia">Treballar amb matrius i imatges</caption>
+      <caption xml:lang="es">Trabajo con matrices e imágenes</caption>
       <caption xml:lang="nl">Werken met matrixen en afbeeldingen</caption>
       <caption xml:lang="pt-BR">Trabalhar com matrizes e imagens</caption>
       <caption xml:lang="sl">Delo z matricami in slikami</caption>
@@ -76,8 +78,10 @@
     <screenshot type="default">
       <image type="source">https://kst-plot.kde.org/screenshots/sessions/non_modal_dialogs.png</image>
       <caption>Non-modal dialogs allow you to use many tools simultaneously</caption>
+      <caption xml:lang="ar">تسمح لك مربعات الحوار غير النمطية (Non-modal) باستخدام العديد من الأدوات في وقت واحد.</caption>
       <caption xml:lang="ca">Els diàlegs no modals permeten utilitzar moltes eines simultàniament</caption>
       <caption xml:lang="ca-valencia">Els diàlegs no modals permeten utilitzar moltes eines simultàniament</caption>
+      <caption xml:lang="es">Los diálogos no modales permiten usar numerosas herramientas simultáneamente</caption>
       <caption xml:lang="nl">Niet-modale dialogen bieden u het tegelijk gebruiken van vele hulpmiddelen</caption>
       <caption xml:lang="pt-BR">Diálogos não modais permitem que você use várias ferramentas simultaneamente</caption>
       <caption xml:lang="sl">Nemodalna pogovorna okna omogočajo hkratno uporabo več orodij</caption>
@@ -87,8 +91,10 @@
     <screenshot>
       <image type="source">https://kst-plot.kde.org/screenshots/dialogs/menu_plot_zoom.png</image>
       <caption>Plot context menu with zoom options</caption>
+      <caption xml:lang="ar">قائمة سياق الرسم البياني مع خيارات التكبير</caption>
       <caption xml:lang="ca">Menú contextual de gràfic amb opcions de zoom</caption>
       <caption xml:lang="ca-valencia">Menú contextual de gràfic amb opcions de zoom</caption>
+      <caption xml:lang="es">Menú de contexto del gráfico con las opciones de ampliación</caption>
       <caption xml:lang="nl">Contextmenu van plot met opties voor zoomen</caption>
       <caption xml:lang="pt-BR">Menu de contexto do gráfico com opções de zoom</caption>
       <caption xml:lang="sl">Kontekstni meni za risanje z možnostmi povečave</caption>
