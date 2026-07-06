@@ -14,6 +14,7 @@
   <name xml:lang="ca-valencia">Kst</name>
   <name xml:lang="cs">Kst</name>
   <name xml:lang="es">Kst</name>
+  <name xml:lang="eu">Kst</name>
   <name xml:lang="fr">Kst</name>
   <name xml:lang="gl">Kst</name>
   <name xml:lang="he">Kst</name>
@@ -33,6 +34,7 @@
   <summary xml:lang="ca-valencia">Visor de dades</summary>
   <summary xml:lang="cs">Prohlížeč dat</summary>
   <summary xml:lang="es">Visor de datos</summary>
+  <summary xml:lang="eu">Datuak ikusteko tresna</summary>
   <summary xml:lang="fr">Afficheur de données</summary>
   <summary xml:lang="gl">Visor de datos</summary>
   <summary xml:lang="he">מציג נתונים</summary>
@@ -53,6 +55,7 @@
     <p xml:lang="ca-valencia">Esta aplicació s'utilitza per a mostrar dades científiques.</p>
     <p xml:lang="cs">Tato aplikace slouží k zobrazování vědeckých dat.</p>
     <p xml:lang="es">Esta aplicación se usa para mostrar datos científicos.</p>
+    <p xml:lang="eu">Aplikazio hau datu zientifikoak bistaratzeko erabiltzen da.</p>
     <p xml:lang="fr">Cette application est utilisée pour l'affichage de données scientifiques.</p>
     <p xml:lang="gl">Aplicación para amosar datos científicos.</p>
     <p xml:lang="he">היישום הזה משמש להצגת נתונים מדעיים.</p>
@@ -75,6 +78,7 @@
       <caption xml:lang="ca">Treballar amb matrius i imatges</caption>
       <caption xml:lang="ca-valencia">Treballar amb matrius i imatges</caption>
       <caption xml:lang="es">Trabajo con matrices e imágenes</caption>
+      <caption xml:lang="eu">Matrizeekin eta irudiekin lan egitea</caption>
       <caption xml:lang="fr">Travail avec des matrices et des images</caption>
       <caption xml:lang="he">עבודה עם מטריצות ותמונות.</caption>
       <caption xml:lang="it">Lavorare con matrici e immagini</caption>
@@ -93,6 +97,7 @@
       <caption xml:lang="ca">Els diàlegs no modals permeten utilitzar moltes eines simultàniament</caption>
       <caption xml:lang="ca-valencia">Els diàlegs no modals permeten utilitzar moltes eines simultàniament</caption>
       <caption xml:lang="es">Los diálogos no modales permiten usar numerosas herramientas simultáneamente</caption>
+      <caption xml:lang="eu">Elkarrizketa-koadro ez modalek tresna asko aldi berean erabiltzeko aukera ematen dizute</caption>
       <caption xml:lang="fr">Les boites de dialogue non modales vous permettent d'utiliser plusieurs outils de façon simultanée</caption>
       <caption xml:lang="he">חלונות בלתי נדיפים מאפשרים לך להשתמש במגוון כלים במקביל</caption>
       <caption xml:lang="it">Le finestre non modali consentono di utilizzare molti strumenti contemporaneamente</caption>
@@ -111,6 +116,7 @@
       <caption xml:lang="ca">Menú contextual de gràfic amb opcions de zoom</caption>
       <caption xml:lang="ca-valencia">Menú contextual de gràfic amb opcions de zoom</caption>
       <caption xml:lang="es">Menú de contexto del gráfico con las opciones de ampliación</caption>
+      <caption xml:lang="eu">Grafikoaren laster-menua zoom aukerekin</caption>
       <caption xml:lang="fr">Menu contextuel du graphique avec les options de zoom</caption>
       <caption xml:lang="he">תפריט הקשר לשרטוט עם אפשרויות תקריב</caption>
       <caption xml:lang="it">Menu contestuale dei grafici con opzioni di ingrandimento</caption>
