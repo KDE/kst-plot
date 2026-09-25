@@ -599,21 +599,30 @@ ValidateDataSourceThread::ValidateDataSourceThread(const QString& file, const in
 static QMutex _mutex;
 void ValidateDataSourceThread::run() {
 
-  QFileInfo info(_file);
-  if (!info.exists()) {
-    emit dataSourceInvalid(_requestID);
-    return;
+  QUrl url(_file);
+  bool isNetworkUrl = !url.scheme().isEmpty() && url.scheme() != "file";
+  QString fn = _file;
+  if (url.isValid() && url.isLocalFile()) {
+    fn = url.toLocalFile();
+  }
+
+  if (!isNetworkUrl) {
+    QFileInfo info(fn);
+    if (!info.exists()) {
+      emit dataSourceInvalid(_requestID);
+      return;
+    }
   }
 
   // FIXME validSource(_file) is not thread safe, so wait
   // if there is another one running
   QMutexLocker locker(&_mutex);
-  if (!DataSourcePluginManager::validSource(_file)) {
+  if (!DataSourcePluginManager::validSource(fn)) {
     emit dataSourceInvalid(_requestID);
     return;
   }
 
-  emit dataSourceValid(_file, _requestID);
+  emit dataSourceValid(fn, _requestID);
 }
 
 
