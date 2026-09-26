@@ -516,6 +516,22 @@ void DataVector::internalUpdate() {
     return;
   }
 
+  const int recheckFrames = dataSource()->framesToRecheck(_field);
+  if (recheckFrames > 0 && NF > 0) {
+    if (DoSkip) {
+      // Both NF and the read loop are skip-aligned: revisit complete groups
+      // so old plotted values are replaced without resetting the vector.
+      const double rewind = std::ceil(double(recheckFrames) / Skip) * Skip;
+      NF = qMax(0.0, NF - rewind);
+      _numSamples = int(NF / Skip);
+    } else {
+      NF = qMax(0.0, NF - double(recheckFrames));
+      // With SPF > 1 the existing read path rereads the last retained frame
+      // in full, so only count the earlier frames as reusable samples.
+      _numSamples = NF > 0 ? int((SPF > 1 ? NF - 1 : NF) * SPF) : 0;
+    }
+  }
+
   // shift vector if necessary
   if ((NF>new_nf) || new_f0 < F0 || new_f0 >= F0 + NF) { // No useful data around.
     reset();

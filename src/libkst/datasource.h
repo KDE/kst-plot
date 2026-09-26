@@ -133,6 +133,10 @@ class KSTCORE_EXPORT DataSource : public Object
       It must be implemented by the datasource. */
     virtual UpdateType internalDataSourceUpdate() = 0;
 
+    /** Frames at the end of a field that must be reread after this update.
+      Streaming sources can use this to repair samples that arrived late. */
+    virtual int framesToRecheck(const QString &field) const { Q_UNUSED(field) return 0; }
+
     /** some constructors create their datasource with their updates disabled
         because it may be expensive to parse the whole file.
         Call this function before actually using the data source (eg,
