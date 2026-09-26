@@ -167,6 +167,13 @@ DataSource::~DataSource() {
 }
 
 QString DataSource::cleanPath(QString abs_path) {
+  // Filesystem normalization collapses "ssdb://" (and other URL schemes)
+  // into "ssdb:/", making datasource addresses invalid on dialog reuse.
+  QUrl url(abs_path);
+  if (abs_path.contains(QLatin1String("://")) && url.isValid() &&
+      !url.scheme().isEmpty() && url.scheme() != QLatin1String("file")) {
+    return abs_path;
+  }
   QString name = QDir::cleanPath(abs_path);
 
   // qdir::cleanpath doesn't seem to remove leading /.. from paths (!)
@@ -598,13 +605,18 @@ ValidateDataSourceThread::ValidateDataSourceThread(const QString& file, const in
 
 static QMutex _mutex;
 void ValidateDataSourceThread::run() {
-
-  QUrl url(_file);
-  bool isNetworkUrl = !url.scheme().isEmpty() && url.scheme() != "file";
-  QString fn = _file;
-  if (url.isValid() && url.isLocalFile()) {
-    fn = url.toLocalFile();
+  // Normalize bare SSDB host:port before deciding if the source must exist
+  // on disk. A bare address is not a file even though QUrl(_file) has no scheme.
+  QMutexLocker locker(&_mutex);
+  if (!DataSourcePluginManager::validSource(_file)) {
+    emit dataSourceInvalid(_requestID);
+    return;
   }
+  // validSource() normalizes the address and records the mapping. obtainFile()
+  // is private; use its published mapping for the filesystem check and signal.
+  const QString fn = DataSourcePluginManager::urlMap().value(_file, _file);
+  QUrl url(fn);
+  bool isNetworkUrl = !url.scheme().isEmpty() && url.scheme() != "file";
 
   if (!isNetworkUrl) {
     QFileInfo info(fn);
@@ -612,14 +624,6 @@ void ValidateDataSourceThread::run() {
       emit dataSourceInvalid(_requestID);
       return;
     }
-  }
-
-  // FIXME validSource(_file) is not thread safe, so wait
-  // if there is another one running
-  QMutexLocker locker(&_mutex);
-  if (!DataSourcePluginManager::validSource(fn)) {
-    emit dataSourceInvalid(_requestID);
-    return;
   }
 
   emit dataSourceValid(fn, _requestID);

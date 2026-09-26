@@ -261,8 +261,15 @@ void VectorTab::sourceValid(QString filename, int requestID) {
   if (_requestID != requestID) {
     return;
   }
-  _valid = true;
   _dataSource = DataSourcePluginManager::findOrLoadSource(_store, filename);
+  if (!_dataSource || !_dataSource->isValid()) {
+    _dataSource = nullptr;
+    _valid = false;
+    validating = false;
+    emit sourceChanged();
+    return;
+  }
+  _valid = true;
   _field->setEnabled(true);
 
   _dataSource->readLock();

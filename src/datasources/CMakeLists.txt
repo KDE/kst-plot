@@ -56,18 +56,22 @@ if(TARGET HDF5::HDF5)
 endif()
 
 find_program(CARGO_EXECUTABLE cargo)
-# set(SSDB_WORKSPACE_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/ssdb)
-set(SSDB_WORKSPACE_ROOT "/home/cbn/programs/ss/cmd-tlm")
+set(SSDB_WORKSPACE_ROOT "${CMAKE_SOURCE_DIR}/../ss/cmd-tlm" CACHE PATH
+		"Location of the telemetry_c Cargo workspace (leave empty to disable SSDB)")
 set(SSDB_RUST_DIR ${SSDB_WORKSPACE_ROOT}/telemetry_c)
-set(SSDB_RUST_WORKSPACE_READY TRUE)
+set(SSDB_RUST_WORKSPACE_READY FALSE)
+if(NOT SSDB_WORKSPACE_ROOT STREQUAL "")
+	set(SSDB_RUST_WORKSPACE_READY TRUE)
+endif()
 
-foreach(_ssdb_manifest
+set(SSDB_RUST_MANIFESTS
 	${SSDB_WORKSPACE_ROOT}/Cargo.toml
 	${SSDB_WORKSPACE_ROOT}/telemetry/Cargo.toml
 	${SSDB_WORKSPACE_ROOT}/telemetry_c/Cargo.toml
 	${SSDB_WORKSPACE_ROOT}/telemetry-derived/Cargo.toml
 	${SSDB_WORKSPACE_ROOT}/tokenize/Cargo.toml
 	${SSDB_WORKSPACE_ROOT}/util/Cargo.toml)
+foreach(_ssdb_manifest ${SSDB_RUST_MANIFESTS})
 	if(NOT EXISTS ${_ssdb_manifest})
 		set(SSDB_RUST_WORKSPACE_READY FALSE)
 	endif()
@@ -75,23 +79,31 @@ endforeach()
 
 if(CARGO_EXECUTABLE AND SSDB_RUST_WORKSPACE_READY)
 	set(SSDB_RUST_LIB ${SSDB_WORKSPACE_ROOT}/target/release/libtelemetry_c.a)
+	file(GLOB_RECURSE SSDB_RUST_SOURCES CONFIGURE_DEPENDS
+		${SSDB_WORKSPACE_ROOT}/telemetry_c/src/*.rs
+		${SSDB_WORKSPACE_ROOT}/telemetry/src/*.rs
+		${SSDB_WORKSPACE_ROOT}/telemetry-derived/src/*.rs
+		${SSDB_WORKSPACE_ROOT}/tokenize/src/*.rs
+		${SSDB_WORKSPACE_ROOT}/util/src/*.rs)
+	if(EXISTS ${SSDB_WORKSPACE_ROOT}/Cargo.lock)
+		list(APPEND SSDB_RUST_MANIFESTS ${SSDB_WORKSPACE_ROOT}/Cargo.lock)
+	endif()
 
-	add_custom_command(
-		OUTPUT ${SSDB_RUST_LIB}
-		COMMAND ${CARGO_EXECUTABLE} build --release
+	add_custom_command(OUTPUT ${SSDB_RUST_LIB}
+		COMMAND ${CARGO_EXECUTABLE} build --release -p telemetry_c
+		DEPENDS ${SSDB_RUST_SOURCES} ${SSDB_RUST_MANIFESTS} ${SSDB_RUST_DIR}/build.rs
 		WORKING_DIRECTORY ${SSDB_RUST_DIR}
 		COMMENT "Building ssdb Rust telemetry_c library"
 		VERBATIM
 	)
-
 	add_custom_target(ssdb_rust_lib DEPENDS ${SSDB_RUST_LIB})
 
 	add_library(telemetry_c STATIC IMPORTED GLOBAL)
 	set_target_properties(telemetry_c PROPERTIES IMPORTED_LOCATION ${SSDB_RUST_LIB})
 	add_dependencies(telemetry_c ssdb_rust_lib)
 
-	include_directories(${CMAKE_CURRENT_SOURCE_DIR}/ssdb/telemetry_c/c)
+	include_directories(${SSDB_RUST_DIR}/c)
 	kst_add_plugin(. ssdb LINK_LIBRARIES telemetry_c dl pthread m)
-elseif(CARGO_EXECUTABLE)
-	message(STATUS "Skipping ssdb plugin: Rust workspace is incomplete under src/datasources/ssdb")
+else()
+	message(STATUS "Skipping ssdb plugin: cargo not found, workspace disabled or incomplete at ${SSDB_WORKSPACE_ROOT}")
 endif()

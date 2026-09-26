@@ -19,6 +19,8 @@
 #include "datavector.h"
 
 #include <assert.h>
+#include <climits>
+#include <cmath>
 #include <math.h>
 #include <stdlib.h>
 
@@ -497,6 +499,21 @@ void DataVector::internalUpdate() {
       new_f0 = ((new_f0-1)/Skip+1)*Skip;
     }
     new_nf = (new_nf/Skip)*Skip;
+  }
+
+  // In particular an epoch-origin SSDB source can report billions of frames.
+  // Reject unrepresentable/unsafe vector sizes *before* resizing or casting to int.
+  const long double requestedSamples = DoSkip ? (long double)new_nf / Skip
+      : ((long double)new_nf - 1) * info.samplesPerFrame + 1;
+  const bool ssdb = dataSource()->fileType().contains("(SSDB)");
+  if (!std::isfinite(new_f0) || !std::isfinite(new_nf) ||
+      new_f0 < 0 || new_nf < 0 || info.samplesPerFrame < 1 ||
+      requestedSamples < 0 || requestedSamples > INT_MAX ||
+      (ssdb && requestedSamples > 10000000)) {
+    qWarning() << "Data vector request exceeds supported frame/sample range:"
+               << dataSource()->fileName() << _field << new_f0 << new_nf;
+    dataSource()->unlock();
+    return;
   }
 
   // shift vector if necessary

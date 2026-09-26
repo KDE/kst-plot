@@ -138,7 +138,8 @@ void VScalar::internalUpdate() {
     DataVector::ReadInfo p;
     p.data = &_value;
     p.startingFrame = f0;
-    p.numberOfFrames = 1;
+    // Legacy datasource readers use a negative frame count to request one sample.
+    p.numberOfFrames = -1;
     p.skipFrame = -1;
     p.singleSample = true;
     dataSource()->vector().read(_field, p);

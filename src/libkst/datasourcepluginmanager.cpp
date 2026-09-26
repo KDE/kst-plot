@@ -24,6 +24,7 @@
 #include <QFileInfo>
 #include <QLibraryInfo>
 #include <QPluginLoader>
+#include <QRegularExpression>
 #include <QTextDocument>
 #include <QUrl>
 #include <QXmlStreamWriter>
@@ -127,6 +128,19 @@ QString DataSourcePluginManager::obtainFile(const QString& source) {
 
   if (url_map.contains(source)) {
     return url_map[source];
+  }
+
+  // QUrl::fromUserInput treats host:port as a local file or an unknown
+  // scheme on some platforms. Canonicalize only well-formed SSDB endpoints.
+  static const QRegularExpression ssdbAddress(
+      "^((?:\\[[0-9a-fA-F:]+\\])|(?:[A-Za-z0-9.-]+)):([0-9]{1,5})$");
+  const auto match = ssdbAddress.match(source);
+  if (match.hasMatch()) {
+    const int port = match.captured(2).toInt();
+    if (port > 0 && port <= 65535) {
+      url_map[source] = "ssdb://" + source;
+      return url_map[source];
+    }
   }
 
   QUrl url = QUrl::fromUserInput(source);

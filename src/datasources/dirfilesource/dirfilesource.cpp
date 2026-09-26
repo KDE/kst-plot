@@ -170,7 +170,8 @@ const DataVector::DataInfo DataInterfaceDirFileVector::dataInfo(const QString &f
 
 int DataInterfaceDirFileVector::read(const QString& field, DataVector::ReadInfo& p)
 {
-  return dir.readField(p.data, field, p.startingFrame, p.numberOfFrames);
+  return dir.readField(p.data, field, p.startingFrame,
+                       p.singleSample ? -1 : p.numberOfFrames);
 }
 
 
