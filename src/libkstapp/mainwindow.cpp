@@ -451,10 +451,9 @@ QStringList MainWindow::recentDataFiles() {
 }
 
 void MainWindow::cleanupRecentDataFilesList() {
-  QStringList recentFiles = _settings.value("recentDataFileList").toStringList();
-  recentFiles.removeDuplicates();
+  QStringList recentFiles = recentDataFiles();
   foreach(const QString& it, recentFiles) {
-    if (!QFileInfo(it).exists()) {
+    if (!DataSource::isNonFileUrl(it) && !QFileInfo(it).exists()) {
       recentFiles.removeOne(it);
     }
   }
@@ -468,7 +467,8 @@ void MainWindow::updateRecentFiles(const QString& key ,QMenu* menu, QList<QActio
 {
   // Always add absolute paths to the recent file lists, otherwise they are not very reusable
   QString absoluteFilePath = DataSource::cleanPath(newfilename);
-  if (!newfilename.isEmpty() && !QDir::isAbsolutePath(newfilename)) { // If it's not empty and not absolute either, add the dir
+  if (!newfilename.isEmpty() && !DataSource::isNonFileUrl(newfilename) &&
+      !QDir::isAbsolutePath(newfilename)) { // Relative filesystem path only.
     absoluteFilePath = DataSource::cleanPath(QDir::currentPath() + '/' + newfilename);
   }
   foreach(QAction* it, actions) {
@@ -500,7 +500,8 @@ void MainWindow::updateRecentFiles(const QString& key ,QMenu* menu, QList<QActio
     i++;
     if (i <= 5) {
       // don't make file menu too wide, show complete path in statusbar
-      QAction* action = createRecentFileAction(it, i, QFileInfo(it).fileName(), openslot);
+      QAction* action = createRecentFileAction(it, i,
+        DataSource::isNonFileUrl(it) ? it : QFileInfo(it).fileName(), openslot);
       actions << action;
       menu->addAction(action);
     }
@@ -522,14 +523,16 @@ void MainWindow::checkRecentFilesOnExistence()
 {
   QAction *action = qobject_cast<QAction *>(sender());
   if (action) {
-    QStringList recentFiles = _settings.value(action->data().toString()).toStringList();
+    const QString key = action->data().toString();
+    const bool dataFiles = key == QLatin1String("recentDataFileList");
+    QStringList recentFiles = _settings.value(key).toStringList();
     recentFiles.removeDuplicates();
     foreach(const QString& it, recentFiles) {
-      if (!QFileInfo(it).exists()) {
+      if (!(dataFiles && DataSource::isNonFileUrl(it)) && !QFileInfo(it).exists()) {
         recentFiles.removeOne(it);
       }
     }
-    _settings.setValue(action->data().toString(), recentFiles);
+    _settings.setValue(key, recentFiles);
     updateRecentKstFiles();
     updateRecentDataFiles();
   }

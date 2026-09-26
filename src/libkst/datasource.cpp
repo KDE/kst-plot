@@ -166,12 +166,15 @@ DataSource::~DataSource() {
   delete interf_matrix;
 }
 
+bool DataSource::isNonFileUrl(const QString &path) {
+  const QUrl url(path);
+  return path.contains(QLatin1String("://")) && url.isValid() &&
+      !url.scheme().isEmpty() && url.scheme() != QLatin1String("file");
+}
+
 QString DataSource::cleanPath(QString abs_path) {
-  // Filesystem normalization collapses "ssdb://" (and other URL schemes)
-  // into "ssdb:/", making datasource addresses invalid on dialog reuse.
-  QUrl url(abs_path);
-  if (abs_path.contains(QLatin1String("://")) && url.isValid() &&
-      !url.scheme().isEmpty() && url.scheme() != QLatin1String("file")) {
+  // Filesystem normalization collapses "ssdb://" (and other URL schemes).
+  if (isNonFileUrl(abs_path)) {
     return abs_path;
   }
   QString name = QDir::cleanPath(abs_path);

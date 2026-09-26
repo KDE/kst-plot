@@ -236,6 +236,7 @@ class KSTCORE_EXPORT DataSource : public Object
     PrimitiveList slavePrimitives;
 
 
+    static bool isNonFileUrl(const QString &path);
     static QString cleanPath(QString abs_path);
 
   public Q_SLOTS:
