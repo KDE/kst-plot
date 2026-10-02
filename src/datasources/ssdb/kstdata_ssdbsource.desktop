@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=Kst Data Source
+X-KDE-ModuleType=Plugin
+X-KDE-Library=ssdb
+X-Kst-Plugin-Author=The University of Toronto
+Name=SSDB Telemetry Source
+Comment=Reads from ssdb:// telemetry server
