@@ -15,8 +15,6 @@
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QRegularExpression>
-#include <psversion.h>
-#include <sysinfo.h>
 #include <QThreadPool>
 
 #include "colorsequence.h"

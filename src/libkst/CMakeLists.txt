@@ -59,8 +59,6 @@ target_sources(Kst6Core PRIVATE
     plotiteminterface.h
     primitive.h
     primitivefactory.h
-    procps.h
-    psversion.h
     rwlock.h
     scalar.h
     scalarfactory.h
@@ -70,15 +68,12 @@ target_sources(Kst6Core PRIVATE
     string_kst.h
     stringfactory.h
     stringscriptinterface.h
-    sysinfo.h
     updatemanager.h
     updateserver.h
     vector.h
     vectorfactory.h
     vectorscriptinterface.h
     vscalar.h
-    psversion.c
-    sysinfo.c
     builtinprimitives.cpp
     coredocument.cpp
     datacollection.cpp
