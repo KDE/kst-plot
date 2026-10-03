@@ -2146,11 +2146,11 @@ void MainWindow::forward(double scale) {
 
   foreach (DataMatrixPtr m, dataMatrices) {
     if (m->isStream()) {
-      int  new_frame;
-      int filelength = m->fileLength();
+      qint64 new_frame;
+      qint64 filelength = m->fileLength();
       if (most_popular_lastF>=0) {
         if (most_popular_lastF < filelength) {
-          new_frame = most_popular_lastF;
+          new_frame = qint64(most_popular_lastF);
         } else {
           new_frame = filelength-1;
         }
@@ -2293,11 +2293,11 @@ void MainWindow::back(double scale) {
 
   foreach (DataMatrixPtr m, dataMatrices) {
     if (m->isStream()) {
-      int  new_frame;
-      int filelength = m->fileLength();
+      qint64 new_frame;
+      qint64 filelength = m->fileLength();
       if (most_popular_lastF>=0) {
         if (most_popular_lastF < filelength) {
-          new_frame = most_popular_lastF;
+          new_frame = qint64(most_popular_lastF);
         } else {
           new_frame = filelength-1;
         }

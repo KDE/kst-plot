@@ -5,9 +5,11 @@
 #include <dataplugin.h>
 #include <QMap>
 #include <QSet>
+#include <QVector>
 
 struct consumer_t;
 struct scalar_token_t;
+struct matrix_token_t;
 
 class SsdbSource : public Kst::DataSource {
   Q_OBJECT
@@ -20,6 +22,19 @@ class SsdbSource : public Kst::DataSource {
       QString units;
       QString quantity;
       qint64 lastTime = 0;
+    };
+
+    struct MatrixField {
+      matrix_token_t *token = nullptr;
+      QString units;
+      QString quantity;
+      qint64 lastTime = 0;
+    };
+
+    struct MatrixSample {
+      int nrows = 0;
+      int ncols = 0;
+      QVector<double> values;
     };
 
     SsdbSource(Kst::ObjectStore *store, QSettings *cfg, const QString& filename,
@@ -35,10 +50,15 @@ class SsdbSource : public Kst::DataSource {
     void save(QXmlStreamWriter &writer) override;
     void parseProperties(QXmlStreamAttributes &properties) override;
     bool isEmpty() const override;
+    bool isImageStream(QString field) override { return isMatrixField(field); }
+    Kst::DataMatrix::DataInfo matrixDataInfo(const QString &field, qint64 frame) const override;
 
     QStringList vectorList() const;
     bool isVectorField(const QString &name) const;
     const Field *field(const QString& name) const;
+    QStringList matrixNames() const;
+    bool isMatrixField(const QString &name) const;
+    const MatrixField *matrixField(const QString &name) const;
     double frameCount() const;
     double frameRate() const { return _frameRate; }
     double delayMs() const { return _delayMs; }
@@ -48,20 +68,32 @@ class SsdbSource : public Kst::DataSource {
     void setRepairWindow(double windowMs);
     int readVector(double *data, const QString &field, const Kst::DataVector::ReadInfo &info);
     Kst::DataVector::DataInfo vectorInfo(const QString& field) const;
+    int readMatrix(Kst::MatrixData *data, const QString &field,
+             const Kst::DataMatrix::ReadInfo &info);
+    Kst::DataMatrix::DataInfo matrixInfo(const QString &field, qint64 frame) const;
 
     static QString endpoint(const QString &source);
     static QStringList fieldsAt(const QString &source);
+    static QStringList matrixFieldsAt(const QString &source);
     static bool validRate(double rate);
 
   private:
     void close();
     void updateFrameCount(qint64 latest);
     bool selectValue(scalar_token_t *token, qint64 time, double *value);
+    bool selectMatrix(const QString &field, qint64 frame, MatrixSample *sample) const;
+    bool frameTime(qint64 frame, qint64 *time) const;
 
     consumer_t *_consumer = nullptr;
     QString _address;
     QMap<QString, Field> _fields;
+    QMap<QString, MatrixField> _matrixFields;
     QSet<QString> _changedFields;
+    struct CachedMatrix {
+      qint64 frame = -1;
+      MatrixSample sample;
+    };
+    mutable QMap<QString, CachedMatrix> _matrixCache;
     qint64 _originNs = 0; // Other origin policies can be added without changing frame indexing.
     qint64 _framePeriodNs = 200000000;
     qint64 _delayNs = 100000000;
@@ -69,7 +101,7 @@ class SsdbSource : public Kst::DataSource {
     double _frameRate = 5.0;
     double _delayMs = 100.0;
     double _repairWindowMs = 2000.0;
-    double _frameCount = 0;
+    qint64 _frameCount = 0;
 };
 
 class SsdbSourcePlugin : public QObject, public Kst::DataSourcePluginInterface {

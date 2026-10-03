@@ -1,6 +1,6 @@
-// SSDB datasource: exposes database scalar streams on a shared, epoch-based
-// frame grid. The server resamples values with zero-order hold (ZOH); Kst
-// caches those values and rereads a short tail when late field writes arrive.
+// SSDB datasource: exposes database scalar streams and indexed matrix samples
+// on a shared, epoch-based frame grid. The server resamples values with
+// zero-order hold (ZOH); Kst rereads a short tail when late field writes arrive.
 // INDEX (frame number) and TIME (Unix seconds at the frame boundary) are
 // synthetic vectors and never request sample data from the database.
 #include "ssdbsource.h"
@@ -99,6 +99,45 @@ class SsdbVector : public DataSource::DataInterface<DataVector> {
       const SsdbSource::Field *field = _source.field(name);
       if (!field) return {};
       return {{"units", field->units}, {"quantity", field->quantity}};
+    }
+
+  private:
+    SsdbSource &_source;
+};
+
+class SsdbMatrix : public DataSource::DataInterface<DataMatrix> {
+  public:
+    explicit SsdbMatrix(SsdbSource &source) : _source(source) {}
+
+    int read(const QString &name, DataMatrix::ReadInfo &info) override {
+      return _source.readMatrix(info.data, name, info);
+    }
+
+    QStringList list() const override { return _source.matrixNames(); }
+    bool isListComplete() const override { return true; }
+    bool isValid(const QString &name) const override { return _source.isMatrixField(name); }
+
+    const DataMatrix::DataInfo dataInfo(const QString &name, double frame = 0) const override {
+      if (!std::isfinite(frame) || std::floor(frame) != frame ||
+          frame < double(LLONG_MIN) || frame >= -double(LLONG_MIN))
+        return DataMatrix::DataInfo();
+      return _source.matrixInfo(name, qint64(frame));
+    }
+
+    void setDataInfo(const QString &, const DataMatrix::DataInfo &) override {}
+
+    QMap<QString, double> metaScalars(const QString &name) override {
+      return _source.isMatrixField(name) ? QMap<QString, double>{{"FRAMES", _source.frameCount()}}
+                                         : QMap<QString, double>{};
+    }
+
+    QMap<QString, QString> metaStrings(const QString &name) override {
+      const SsdbSource::MatrixField *field = _source.matrixField(name);
+      if (!field) return {};
+      QMap<QString, QString> values;
+      if (!field->units.isEmpty()) values.insert("z_units", field->units);
+      if (!field->quantity.isEmpty()) values.insert("z_quantity", field->quantity);
+      return values;
     }
 
   private:
@@ -308,6 +347,7 @@ SsdbSource::SsdbSource(ObjectStore *store, QSettings *cfg, const QString &filena
                        const QString &type, const QDomElement &element)
     : DataSource(store, cfg, filename, type), _address(endpoint(filename)) {
   setInterface(new SsdbVector(*this));
+  setInterface(new SsdbMatrix(*this));
   setInterface(new SsdbScalar(*this));
   setInterface(new SsdbString(*this));
   _valid = false;
@@ -341,7 +381,10 @@ SsdbSource::~SsdbSource() { close(); }
 // Drop the current connection and cached field registration state.
 void SsdbSource::close() {
   for (auto &field : _fields) free(field.token);
+  for (auto &field : _matrixFields) free(field.token);
   _fields.clear();
+  _matrixFields.clear();
+  _matrixCache.clear();
   _changedFields.clear();
   free(_consumer);
   _consumer = nullptr;
@@ -349,7 +392,7 @@ void SsdbSource::close() {
   _latestTime = 0;
 }
 
-// Connect and register scalar fields, reserving INDEX and TIME for the grid.
+// Connect and register supported scalar and matrix fields.
 bool SsdbSource::init() {
   close();
   _consumer = consumer_new("kst ssdb reader", _address.toUtf8().constData());
@@ -368,32 +411,46 @@ bool SsdbSource::init() {
 
   for (uint32_t i = 0; i < count; ++i) {
     const metadata_t &meta = metadata[i];
-    if (meta.structure != 0 || !meta.name) continue; // SSDB vectors/matrices are deferred.
+    if (!meta.name) continue;
     QString name = QString::fromUtf8(meta.name);
-    if (name == indexFieldString || name == timeFieldString) {
-      qWarning() << "SSDB: field" << name << "is reserved for Kst's synthetic vectors";
-      continue;
-    }
-    if (_fields.contains(name)) continue;
-    scalar_token_t *token = consumer_register_scalar(_consumer, meta.name);
-    if (!token) {
-      logError("registering " + name);
-      continue;
-    }
+    if (meta.structure == 0) {
+      if (name == indexFieldString || name == timeFieldString) {
+        qWarning() << "SSDB: field" << name << "is reserved for Kst's synthetic vectors";
+        continue;
+      }
+      if (_fields.contains(name)) continue;
+      scalar_token_t *token = consumer_register_scalar(_consumer, meta.name);
+      if (!token) {
+        logError("registering " + name);
+        continue;
+      }
 
-    Field field;
-    field.token = token;
-    field.rate = meta.rate;
-    // Write-time statistics drive field-change detection, not sample age.
-    field.lastTime = meta.last_time;
-    field.units = meta.units ? QString::fromUtf8(meta.units) : QString();
-    field.quantity = meta.quantity ? QString::fromUtf8(meta.quantity) : QString();
-    if (std::isfinite(meta.rate) && meta.rate > 0) {
-      // Match nominal field density to the common frame grid.
-      const double spf = std::round(meta.rate / _frameRate);
-      field.samplesPerFrame = int(qBound(1.0, spf, 1000000.0));
+      Field field;
+      field.token = token;
+      field.rate = meta.rate;
+      // Write-time statistics drive field-change detection, not sample age.
+      field.lastTime = meta.last_time;
+      field.units = meta.units ? QString::fromUtf8(meta.units) : QString();
+      field.quantity = meta.quantity ? QString::fromUtf8(meta.quantity) : QString();
+      if (std::isfinite(meta.rate) && meta.rate > 0) {
+        // Match nominal field density to the common frame grid.
+        const double spf = std::round(meta.rate / _frameRate);
+        field.samplesPerFrame = int(qBound(1.0, spf, 1000000.0));
+      }
+      _fields.insert(name, field);
+    } else if (meta.structure == 2 && !_matrixFields.contains(name)) {
+      matrix_token_t *token = consumer_register_matrix(_consumer, meta.name);
+      if (!token) {
+        logError("registering matrix " + name);
+        continue;
+      }
+      MatrixField field;
+      field.token = token;
+      field.lastTime = meta.last_time;
+      field.units = meta.units ? QString::fromUtf8(meta.units) : QString();
+      field.quantity = meta.quantity ? QString::fromUtf8(meta.quantity) : QString();
+      _matrixFields.insert(name, field);
     }
-    _fields.insert(name, field);
   }
   freeMetadata(metadata, count);
 
@@ -412,8 +469,8 @@ void SsdbSource::reset() {
 void SsdbSource::updateFrameCount(qint64 latest) {
   _latestTime = latest;
   const qint64 end = latest - _delayNs;
-  _frameCount = end >= _originNs && latest > 0
-      ? double((end - _originNs) / _framePeriodNs) + 1.0 : 0.0;
+    _frameCount = end >= _originNs && latest > 0
+      ? (end - _originNs) / _framePeriodNs + 1 : 0;
 }
 
 // Advance the grid and flag fields whose writes may change plotted values.
@@ -432,6 +489,7 @@ DataSource::UpdateType SsdbSource::internalDataSourceUpdate() {
     return Updated;
   }
   updateFrameCount(latest);
+  _matrixCache.clear();
 
   // Field data can arrive after the latest frame was first exposed. Check
   // published field progress even when the global frame count has not moved.
@@ -445,6 +503,12 @@ DataSource::UpdateType SsdbSource::internalDataSourceUpdate() {
       if (it != _fields.end() && it->lastTime != metadata[i].last_time) {
         it->lastTime = metadata[i].last_time;
         _changedFields.insert(name);
+      }
+      auto matrixIt = _matrixFields.find(name);
+      if (matrixIt != _matrixFields.end() && matrixIt->lastTime != metadata[i].last_time) {
+        matrixIt->lastTime = metadata[i].last_time;
+        _changedFields.insert(name);
+        _matrixCache.remove(name);
       }
     }
   }
@@ -485,6 +549,7 @@ void SsdbSource::setGrid(double rate, double delayMs) {
     reset();
     store()->resetDataSourceDependents(fileName());
   } else {
+    _matrixCache.clear();
     updateFrameCount(_latestTime);
     registerChange();
   }
@@ -535,6 +600,17 @@ const SsdbSource::Field *SsdbSource::field(const QString &name) const {
   return it == _fields.cend() ? nullptr : &it.value();
 }
 
+QStringList SsdbSource::matrixNames() const { return _matrixFields.keys(); }
+
+bool SsdbSource::isMatrixField(const QString &name) const {
+  return _matrixFields.contains(name);
+}
+
+const SsdbSource::MatrixField *SsdbSource::matrixField(const QString &name) const {
+  auto it = _matrixFields.constFind(name);
+  return it == _matrixFields.cend() ? nullptr : &it.value();
+}
+
 // Expose the common frame count to Kst's vector and scalar interfaces.
 double SsdbSource::frameCount() const { return _frameCount; }
 
@@ -544,6 +620,133 @@ DataVector::DataInfo SsdbSource::vectorInfo(const QString &name) const {
     return DataVector::DataInfo(_frameCount, 1);
   const Field *f = field(name);
   return f ? DataVector::DataInfo(_frameCount, f->samplesPerFrame) : DataVector::DataInfo();
+}
+
+bool SsdbSource::frameTime(qint64 frame, qint64 *time) const {
+  if (!time || frame < 0 || _framePeriodNs <= 0 ||
+      frame > (LLONG_MAX - _originNs) / _framePeriodNs) return false;
+  *time = _originNs + frame * _framePeriodNs;
+  return true;
+}
+
+bool SsdbSource::selectMatrix(const QString &name, qint64 frame, MatrixSample *sample) const {
+  if (!sample || !_consumer) return false;
+  const MatrixField *field = matrixField(name);
+  if (!field) return false;
+
+  auto cached = _matrixCache.constFind(name);
+  if (cached != _matrixCache.cend() && cached->frame == frame) {
+    *sample = cached->sample;
+    return true;
+  }
+
+  qint64 time = 0;
+  if (!frameTime(frame, &time)) return false;
+  if (!consumer_select_resampled_window(_consumer, 1, time)) {
+    logError("selecting matrix sample");
+    return false;
+  }
+
+  matrix_t *selected = consumer_get_selected_matrix(_consumer, field->token, 1);
+  if (!selected) {
+    logError("reading matrix sample");
+    return false;
+  }
+
+  MatrixSample result;
+  const uintptr_t rows = selected[0].nrows;
+  const uintptr_t columns = selected[0].ncols;
+  const bool sizeValid = rows <= uintptr_t(INT_MAX) && columns <= uintptr_t(INT_MAX) &&
+      (!rows || columns <= std::numeric_limits<uintptr_t>::max() / rows) &&
+      rows * columns <= uintptr_t(INT_MAX);
+  if (sizeValid && rows && columns && selected[0].data) {
+    result.nrows = int(rows);
+    result.ncols = int(columns);
+    const int count = int(rows * columns);
+    result.values.resize(count);
+    std::copy_n(selected[0].data, count, result.values.data());
+  } else if (!sizeValid || (rows && columns && !selected[0].data)) {
+    if (selected[0].data && rows && columns) free(selected[0].data);
+    free(selected);
+    logError("invalid matrix result");
+    return false;
+  }
+
+  if (selected[0].data && rows && columns) free(selected[0].data);
+  free(selected);
+  _matrixCache.insert(name, CachedMatrix{frame, result});
+  *sample = result;
+  return true;
+}
+
+DataMatrix::DataInfo SsdbSource::matrixInfo(const QString &name, qint64 frame) const {
+  DataMatrix::DataInfo info;
+  if (!isMatrixField(name) || _frameCount <= 0 || frame >= _frameCount) return info;
+
+  info.frameCount = _frameCount;
+  const qint64 selectedFrame = frame < 0 ? _frameCount - 1 : frame;
+  if (selectedFrame < 0 || selectedFrame >= _frameCount) return info;
+
+  MatrixSample sample;
+  if (selectMatrix(name, selectedFrame, &sample)) {
+    info.xSize = sample.ncols;
+    info.ySize = sample.nrows;
+  } else {
+    // A 0x0 ZOH result means this matrix has no sample at or before the frame.
+    info.xSize = 0;
+    info.ySize = 0;
+  }
+  return info;
+}
+
+DataMatrix::DataInfo SsdbSource::matrixDataInfo(const QString &name, qint64 frame) const {
+  return matrixInfo(name, frame);
+}
+
+int SsdbSource::readMatrix(MatrixData *data, const QString &name,
+                           const DataMatrix::ReadInfo &info) {
+  if (info.skip > 0) return -9999;
+  const qint64 requested = qint64(info.xNumSteps) * info.yNumSteps;
+  const auto clearRequested = [&]() {
+    if (data && data->z && requested > 0 && requested <= INT_MAX)
+      std::fill_n(data->z, int(requested), std::numeric_limits<double>::quiet_NaN());
+    if (data) {
+      data->xMin = info.xStart;
+      data->yMin = info.yStart;
+      data->xStepSize = 1;
+      data->yStepSize = 1;
+    }
+  };
+  if (!data || !data->z || info.frame < 0 || info.xStart < 0 || info.yStart < 0 ||
+      info.xNumSteps <= 0 || info.yNumSteps <= 0 || !_consumer ||
+      !isMatrixField(name) || info.frame >= _frameCount) {
+    clearRequested();
+    return 0;
+  }
+
+  MatrixSample sample;
+  if (!selectMatrix(name, info.frame, &sample) || sample.nrows == 0 || sample.ncols == 0 ||
+      info.xStart >= sample.ncols || info.yStart >= sample.nrows) {
+    clearRequested();
+    return 0;
+  }
+
+  const int width = qMin(info.xNumSteps, sample.ncols - info.xStart);
+  const int height = qMin(info.yNumSteps, sample.nrows - info.yStart);
+  int copied = 0;
+  // Kst's Matrix stores z values as x * ySize + y; SSDB's Matrix is row-major.
+  for (int x = 0; x < width; ++x) {
+    for (int y = 0; y < height; ++y) {
+      const int source = (info.yStart + y) * sample.ncols + info.xStart + x;
+      data->z[copied++] = sample.values[source];
+    }
+  }
+
+  data->xMin = info.xStart;
+  data->yMin = info.yStart;
+  data->xStepSize = 1;
+  data->yStepSize = 1;
+  return copied;
 }
 
 // Fetch one server-resampled (ZOH) value for a trailing local hold.
@@ -665,9 +868,11 @@ int SsdbSource::readVector(double *data, const QString &name, const DataVector::
   return copied;
 }
 
-// Discover fields for Kst's chooser without retaining a consumer connection.
-QStringList SsdbSource::fieldsAt(const QString &source) {
-  QString addr = endpoint(source);
+namespace {
+
+QStringList fieldsAtStructure(const QString &source, uint8_t structure,
+                              bool includeSyntheticVectors) {
+  QString addr = SsdbSource::endpoint(source);
   if (addr.isEmpty()) return {};
   consumer_t *consumer = consumer_new("kst ssdb field discovery", addr.toUtf8().constData());
   if (!consumer) {
@@ -680,11 +885,11 @@ QStringList SsdbSource::fieldsAt(const QString &source) {
   if (!meta) logError("listing fields at " + addr);
   QStringList fields;
   for (uint32_t i = 0; meta && i < count; ++i)
-    if (meta[i].structure == 0 && meta[i].name &&
+    if (meta[i].structure == structure && meta[i].name &&
         QString::fromUtf8(meta[i].name) != indexFieldString &&
         QString::fromUtf8(meta[i].name) != timeFieldString)
       fields << QString::fromUtf8(meta[i].name);
-  if (meta) {
+  if (meta && includeSyntheticVectors) {
     fields.prepend(timeFieldString);
     fields.prepend(indexFieldString);
   }
@@ -694,12 +899,24 @@ QStringList SsdbSource::fieldsAt(const QString &source) {
   return fields;
 }
 
+} // namespace
+
+// Discover scalar fields and synthetic vectors for Kst's field chooser.
+QStringList SsdbSource::fieldsAt(const QString &source) {
+  return fieldsAtStructure(source, 0, true);
+}
+
+// Discover matrix streams without mixing them into the vector field list.
+QStringList SsdbSource::matrixFieldsAt(const QString &source) {
+  return fieldsAtStructure(source, 2, false);
+}
+
 // Identify the plugin in Kst's datasource menu.
 QString SsdbSourcePlugin::pluginName() const { return tr("SSDB Reader"); }
 
-// Summarize the scalar-resampling behavior in the plugin description.
+// Summarize the datasource's scalar and indexed matrix behavior.
 QString SsdbSourcePlugin::pluginDescription() const {
-  return tr("SSDB scalar time-series (zero-order hold resampling)");
+  return tr("SSDB scalar time-series and indexed matrices (zero-order hold resampling)");
 }
 
 // Construct a datasource for an SSDB endpoint.
@@ -709,11 +926,10 @@ DataSource *SsdbSourcePlugin::create(ObjectStore *store, QSettings *cfg,
   return new SsdbSource(store, cfg, name, type, element);
 }
 
-// Matrix streams are not exposed by this plugin.
 QStringList SsdbSourcePlugin::matrixList(QSettings *, const QString &name, const QString &type,
                                          QString *suggestion, bool *complete) const {
-  available(name, type, suggestion, complete);
-  return {};
+  return available(name, type, suggestion, complete) ? SsdbSource::matrixFieldsAt(name)
+                                                     : QStringList();
 }
 
 // Discover scalar fields and synthetic vectors for Kst's field chooser.

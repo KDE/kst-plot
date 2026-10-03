@@ -101,6 +101,12 @@ class KSTCORE_EXPORT DataSource : public Object
     const DataInterface<DataVector>& vector() const {Q_ASSERT(interf_vector); return *interf_vector; }
     const DataInterface<DataMatrix>& matrix() const {Q_ASSERT(interf_matrix); return *interf_matrix; }
 
+    // Preserve exact large frame indices for indexed matrix streams. The default
+    // adapter keeps existing datasource interfaces source-compatible.
+    virtual DataMatrix::DataInfo matrixDataInfo(const QString& field, qint64 frame) const {
+      return matrix().dataInfo(field, double(frame));
+    }
+
 
 
     /************************************************************/
