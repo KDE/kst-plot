@@ -608,27 +608,13 @@ ValidateDataSourceThread::ValidateDataSourceThread(const QString& file, const in
 
 static QMutex _mutex;
 void ValidateDataSourceThread::run() {
-  // Normalize bare SSDB host:port before deciding if the source must exist
-  // on disk. A bare address is not a file even though QUrl(_file) has no scheme.
+  // The manager applies plugin-aware admission for both files and opaque sources.
   QMutexLocker locker(&_mutex);
   if (!DataSourcePluginManager::validSource(_file)) {
     emit dataSourceInvalid(_requestID);
     return;
   }
-  // validSource() normalizes the address and records the mapping. obtainFile()
-  // is private; use its published mapping for the filesystem check and signal.
   const QString fn = DataSourcePluginManager::urlMap().value(_file, _file);
-  QUrl url(fn);
-  bool isNetworkUrl = !url.scheme().isEmpty() && url.scheme() != "file";
-
-  if (!isNetworkUrl) {
-    QFileInfo info(fn);
-    if (!info.exists()) {
-      emit dataSourceInvalid(_requestID);
-      return;
-    }
-  }
-
   emit dataSourceValid(fn, _requestID);
 }
 

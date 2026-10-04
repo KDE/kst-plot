@@ -87,12 +87,23 @@ class DataSourcePluginInterface : public PluginInterface {
     virtual DataSourceConfigWidget *configWidget(QSettings *cfg, const QString& filename) const = 0;
 };
 
+// Optional capability for datasource plugins whose identifiers are not paths.
+// This is separate from DataSourcePluginInterface to preserve its plugin ABI.
+class NonFileDataSourcePluginInterface {
+  public:
+    virtual ~NonFileDataSourcePluginInterface() {}
+
+    // Return true only when this plugin accepts the identifier as a non-file source.
+    virtual bool isNonFileSource(const QString &identifier) const = 0;
+};
+
 
 }
 
 
 Q_DECLARE_INTERFACE(Kst::PluginInterface, "com.kst.PluginInterface/2.0")
 Q_DECLARE_INTERFACE(Kst::DataSourcePluginInterface, "com.kst.DataSourcePluginInterface/2.0")
+Q_DECLARE_INTERFACE(Kst::NonFileDataSourcePluginInterface, "com.kst.NonFileDataSourcePluginInterface/1.0")
 
 
 #endif

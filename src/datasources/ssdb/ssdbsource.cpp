@@ -955,6 +955,10 @@ int SsdbSourcePlugin::understands(QSettings *, const QString &name) const {
   return SsdbSource::endpoint(name).isEmpty() ? 0 : 95;
 }
 
+bool SsdbSourcePlugin::isNonFileSource(const QString &name) const {
+  return !SsdbSource::endpoint(name).isEmpty();
+}
+
 // Declare that the source supplies a time axis to Kst.
 bool SsdbSourcePlugin::supportsTime(QSettings *, const QString &) const { return true; }
 

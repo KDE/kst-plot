@@ -104,9 +104,10 @@ class SsdbSource : public Kst::DataSource {
     qint64 _frameCount = 0;
 };
 
-class SsdbSourcePlugin : public QObject, public Kst::DataSourcePluginInterface {
+class SsdbSourcePlugin : public QObject, public Kst::DataSourcePluginInterface,
+                         public Kst::NonFileDataSourcePluginInterface {
   Q_OBJECT
-  Q_INTERFACES(Kst::DataSourcePluginInterface)
+  Q_INTERFACES(Kst::DataSourcePluginInterface Kst::NonFileDataSourcePluginInterface)
   Q_PLUGIN_METADATA(IID "com.kst.DataSourcePluginInterface/2.0")
   public:
     ~SsdbSourcePlugin() override = default;
@@ -120,6 +121,7 @@ class SsdbSourcePlugin : public QObject, public Kst::DataSourcePluginInterface {
     QStringList scalarList(QSettings *, const QString&, const QString&, QString *, bool *) const override;
     QStringList stringList(QSettings *, const QString&, const QString&, QString *, bool *) const override;
     int understands(QSettings *, const QString&) const override;
+    bool isNonFileSource(const QString&) const override;
     bool supportsTime(QSettings *, const QString&) const override;
     QStringList provides() const override;
     Kst::DataSourceConfigWidget *configWidget(QSettings *, const QString&) const override;

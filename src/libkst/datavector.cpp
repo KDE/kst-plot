@@ -509,9 +509,9 @@ void DataVector::internalUpdate() {
   if (!std::isfinite(new_f0) || !std::isfinite(new_nf) ||
       new_f0 < 0 || new_nf < 0 || info.samplesPerFrame < 1 ||
       requestedSamples < 0 || requestedSamples > INT_MAX ||
-      (ssdb && requestedSamples > 10000000)) {
-    qWarning() << "Data vector request exceeds supported frame/sample range:"
-               << dataSource()->fileName() << _field << new_f0 << new_nf;
+      (ssdb && requestedSamples > 1000000000)) {
+    // Fixme: we should estimate max vector size based on available memory, not just 1GB for SSDB.
+    // The Rule should be for everyone.  But make sure it doesn't kill performance.
     dataSource()->unlock();
     return;
   }

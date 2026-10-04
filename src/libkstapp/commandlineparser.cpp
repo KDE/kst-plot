@@ -464,18 +464,24 @@ QString CommandLineParser::kstFileName() {
 }
 
 bool CommandLineParser::checkFile(QString filename) {
-  QFileInfo info(filename);
-  if (!info.exists()) {
-    printUsage(tr("file %1 does not exist.\n").arg(filename));
+  const bool sourceValid = DataSourcePluginManager::validSource(filename);
+  const QString resolved = DataSourcePluginManager::urlMap().value(filename, filename);
+  const bool nonFileSource = DataSourcePluginManager::isNonFileSource(filename);
+  QFileInfo info(resolved);
+  if (!nonFileSource && info.isFile() && info.size() == 0) {
+    printUsage(tr("file %1 is empty.\n").arg(filename));
     return false;
   }
-  if (info.isFile()) {
-    if (info.size() == 0) {
-      printUsage(tr("file %1 is empty.\n").arg(filename));
-      return false;
+
+  if (!sourceValid) {
+    if (!info.exists()) {
+      printUsage(tr("file %1 does not exist or is not a recognized data source.\n").arg(filename));
+    } else {
+      printUsage(tr("file %1 is not a recognized data source.\n").arg(filename));
     }
+    return false;
   }
-  return true;
+  return nonFileSource || info.exists();
 }
 
 bool CommandLineParser::processCommandLine(bool *ok) {
@@ -578,6 +584,11 @@ bool CommandLineParser::processCommandLine(bool *ok) {
         }
 
         DataSourcePtr ds = DataSourcePluginManager::findOrLoadSource(_document->objectStore(), file);
+        if (!ds) {
+          printText(tr("Could not load data source %1.\n").arg(file));
+          *ok = false;
+          break;
+        }
         xv = createOrFindDataVector(_xField, ds);
         use_old_xv = false;
       }
@@ -603,6 +614,11 @@ bool CommandLineParser::processCommandLine(bool *ok) {
         }
 
         DataSourcePtr ds = DataSourcePluginManager::findOrLoadSource(_document->objectStore(), file);
+        if (!ds) {
+          printText(tr("Could not load data source %1.\n").arg(file));
+          *ok = false;
+          break;
+        }
         if (!xv || !use_old_xv) {
           xv = createOrFindDataVector(_xField, ds);
         }
@@ -655,6 +671,11 @@ bool CommandLineParser::processCommandLine(bool *ok) {
           }
 
           DataSourcePtr ds = DataSourcePluginManager::findOrLoadSource(_document->objectStore(), file);
+          if (!ds) {
+            printText(tr("Could not load data source %1.\n").arg(file));
+            *ok = false;
+            break;
+          }
 
           DataVectorPtr pv = createOrFindDataVector(field, ds);
 
@@ -708,6 +729,11 @@ bool CommandLineParser::processCommandLine(bool *ok) {
           }
 
           DataSourcePtr ds = DataSourcePluginManager::findOrLoadSource ( _document->objectStore(), file );
+          if (!ds) {
+            printText(tr("Could not load data source %1.\n").arg(file));
+            *ok = false;
+            break;
+          }
 
           DataVectorPtr hv = createOrFindDataVector ( field, ds );
           Q_ASSERT ( _document && _document->objectStore() );
@@ -746,6 +772,11 @@ bool CommandLineParser::processCommandLine(bool *ok) {
           }
 
           DataSourcePtr ds = DataSourcePluginManager::findOrLoadSource(_document->objectStore(), file);
+          if (!ds) {
+            printText(tr("Could not load data source %1.\n").arg(file));
+            *ok = false;
+            break;
+          }
 
           DataMatrixPtr dm = _document->objectStore()->createObject<DataMatrix>();
 
